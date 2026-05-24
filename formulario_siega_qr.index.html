@@ -1,1 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro · Siega 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f2f0e8;font-family:-apple-system,sans-serif;color:#181810;padding-bottom:80px;}
+header{background:#243d20;padding:22px 20px;text-align:center;}
+header h1{color:#deecd8;font-size:20px;font-weight:500;}
+header p{color:#5a8054;font-size:11px;margin-top:5px;letter-spacing:0.15em;text-transform:uppercase;}
+.wrap{padding:20px 16px;max-width:500px;margin:0 auto;}
+.tit{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:#96967c;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid #d8d3c4;}
+.fecha-inp{width:100%;padding:14px;border:1.5px solid #d8d3c4;border-radius:10px;font-size:16px;background:#fafaf6;-webkit-appearance:none;color:#181810;}
+.wcard{background:#fafaf6;border:1.5px solid #d8d3c4;border-radius:12px;padding:16px;margin-bottom:12px;}
+.wcard.on{border-color:#cce3c4;background:#f6faf5;}
+.whead{display:flex;align-items:center;justify-content:space-between;}
+.wleft{display:flex;align-items:center;gap:10px;}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0;}
+.wname{font-size:16px;font-weight:600;}
+.wname input{border:none;background:none;font-size:16px;font-weight:600;color:#181810;outline:none;width:120px;}
+.activar{background:#f2f0e8;color:#96967c;border:1.5px solid #d8d3c4;border-radius:20px;padding:8px 18px;font-size:14px;cursor:pointer;}
+.activar.on{background:#345c2c;color:white;border-color:#345c2c;font-weight:600;}
+.del{background:none;border:none;color:#d8d3c4;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;margin-left:4px;}
+.fields{display:none;margin-top:14px;grid-template-columns:1fr 1fr;gap:10px;}
+.fields.on{display:grid;}
+.fields label{display:block;font-size:11px;color:#96967c;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;}
+.fields input{width:100%;padding:14px 8px;border:1.5px solid #d8d3c4;border-radius:8px;font-size:24px;font-weight:700;text-align:center;background:#f2f0e8;-webkit-appearance:none;color:#181810;}
+.btn-add{width:100%;padding:14px;background:none;border:2px dashed #d8d3c4;border-radius:12px;font-size:15px;color:#96967c;cursor:pointer;margin-top:4px;}
+.btn-send{width:100%;padding:18px;background:#345c2c;color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;margin-top:24px;}
+.note{font-size:12px;color:#96967c;text-align:center;margin-top:10px;line-height:1.6;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Registro de Jornada</h1>
+  <p>Siega · Campaña 2026</p>
+</header>
+<div class="wrap">
+  <div class="tit">Fecha</div>
+  <input type="date" class="fecha-inp" id="fecha">
+  <div class="tit">Trabajadores</div>
+  <div id="lista"></div>
+  <button class="btn-add" id="btnadd">+ Añadir trabajador</button>
+  <button class="btn-send" onclick="enviar()">Enviar por WhatsApp</button>
+  <p class="note">Al pulsar se abrirá WhatsApp con el resumen listo para enviar.</p>
+</div>
+<script>
+var BASE=[
+  {n:'Fernando',c:'#345c2c'},
+  {n:'Jose',c:'#2563a8'},
+  {n:'Carlos',c:'#8a3020'},
+  {n:'Rafael',c:'#6a4a1c'},
+  {n:'Manuel',c:'#1a5050'}
+];
+var COLS=['#2a6040','#6a2060','#206060','#604020','#202060'];
+var ids=[];
+var uid=0;
 
+function addWorker(nombre,color){
+  var id='w'+(uid++);
+  ids.push(id);
+  var ini=(nombre||'?').substring(0,2).toUpperCase();
+  var col=color||COLS[uid%COLS.length];
+  var isBase=!!nombre;
+  var div=document.createElement('div');
+  div.className='wcard';
+  div.id=id;
+  div.innerHTML=
+    '<div class="whead">'+
+      '<div class="wleft">'+
+        '<div class="av" style="background:'+col+'">'+ini+'</div>'+
+        '<div class="wname">'+(isBase?nombre:'<input type="text" placeholder="Nombre" id="name_'+id+'">')+'</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;">'+
+        '<button class="activar" id="btn_'+id+'" onclick="toggle(\''+id+'\')">Activar</button>'+
+        (!isBase?'<button class="del" onclick="removeWorker(\''+id+'\')">×</button>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="fields" id="fields_'+id+'">'+
+      '<div><label>Kilos</label><input type="number" id="kg_'+id+'" placeholder="0" min="0" step="0.1" inputmode="decimal"></div>'+
+      '<div><label>Horas</label><input type="number" id="h_'+id+'" value="7" min="0.5" max="16" step="0.5" inputmode="decimal"></div>'+
+    '</div>';
+  document.getElementById('lista').appendChild(div);
+}
+
+function toggle(id){
+  var btn=document.getElementById('btn_'+id);
+  var fields=document.getElementById('fields_'+id);
+  var card=document.getElementById(id);
+  var isOn=btn.className.indexOf(' on')>=0;
+  if(isOn){
+    btn.className='activar';btn.textContent='Activar';
+    fields.className='fields';card.className='wcard';
+  } else {
+    btn.className='activar on';btn.textContent='✓ Activo';
+    fields.className='fields on';card.className='wcard on';
+    setTimeout(function(){var kg=document.getElementById('kg_'+id);if(kg)kg.focus();},100);
+  }
+}
+
+function removeWorker(id){
+  var el=document.getElementById(id);
+  if(el)el.remove();
+  ids=ids.filter(function(i){return i!==id;});
+}
+
+function enviar(){
+  var fecha=document.getElementById('fecha').value;
+  if(!fecha){alert('Introduce la fecha');return;}
+  var activos=[];var totKg=0;
+  for(var i=0;i<ids.length;i++){
+    var id=ids[i];
+    if(!document.getElementById(id))continue;
+    var btn=document.getElementById('btn_'+id);
+    if(!btn||btn.className.indexOf(' on')<0)continue;
+    var nEl=document.getElementById('name_'+id);
+    var nombre=nEl?nEl.value.trim():(document.getElementById(id).querySelector('.wname').textContent.trim());
+    var kg=parseFloat((document.getElementById('kg_'+id)||{}).value)||0;
+    var h=parseFloat((document.getElementById('h_'+id)||{}).value)||7;
+    if(nombre&&kg>0){activos.push({n:nombre,kg:kg,h:h});totKg+=kg;}
+  }
+  if(!activos.length){alert('Activa al menos un trabajador con kilos');return;}
+  var sep='─────────────────';
+  var txt='🌿 Jornada '+fecha+'\n'+sep+'\n';
+  for(var j=0;j<activos.length;j++){
+    var nom=activos[j].n;while(nom.length<10)nom+=' ';
+    txt+=nom+activos[j].kg.toFixed(1)+' kg · '+activos[j].h+'h\n';
+  }
+  txt+=sep+'\nTotal:     '+totKg.toFixed(1)+' kg';
+  var a=document.createElement('a');
+  a.href='https://wa.me/?text='+encodeURIComponent(txt);
+  a.target='_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+BASE.forEach(function(w){addWorker(w.n,w.c);});
+document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+document.getElementById('btnadd').addEventListener('click',function(){addWorker('','');});
+</script>
+</body>
+</html>
