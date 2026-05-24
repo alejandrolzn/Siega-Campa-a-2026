@@ -2,76 +2,34 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Registro de Jornada · Siega 2026</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro · Siega 2026</title>
 <style>
-  :root {
-    --green:#243d20;--green2:#345c2c;--green3:#4a7a40;
-    --green-bg:#eaf3e6;--green-lt:#cce3c4;
-    --bg:#f2f0e8;--card:#fafaf6;--border:#d8d3c4;
-    --text:#181810;--text2:#4e4e3c;--text3:#96967c;
-    --amber:#7a5e18;--amber-bg:#fdf0d4;
-    --red:#7a2c1c;--red-bg:#fde8e4;
-    --mono:'Courier New',monospace;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;min-height:100vh;padding-bottom:60px;}
-  header{background:linear-gradient(135deg,var(--green) 0%,#1a3018 100%);padding:22px 20px 18px;text-align:center;}
-  header h1{font-size:19px;color:#deecd8;font-weight:500;}
-  header p{font-size:11px;color:#5a8054;margin-top:5px;letter-spacing:0.18em;text-transform:uppercase;}
-  .container{padding:20px 16px;max-width:520px;margin:0 auto;}
-  .section-title{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--text3);margin:24px 0 12px;font-family:var(--mono);padding-bottom:8px;border-bottom:1px solid var(--border);}
-  .field{margin-bottom:16px;}
-  .field label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500;}
-  .field input[type="date"]{width:100%;padding:13px 14px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;font-size:16px;color:var(--text);outline:none;-webkit-appearance:none;}
-  .field input:focus{border-color:var(--green3);box-shadow:0 0 0 3px rgba(74,122,64,0.12);}
-  .worker-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.2s,opacity 0.2s;}
-  .worker-card.inactive{opacity:0.55;}
-  .worker-card.active{border-color:var(--green-lt);background:#f6faf5;}
-  .worker-header{display:flex;align-items:center;justify-content:space-between;}
-  .worker-name{display:flex;align-items:center;gap:10px;}
-  .worker-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-family:var(--mono);flex-shrink:0;}
-  .worker-label{font-size:16px;font-weight:500;}
-  .toggle-btn{background:none;border:1.5px solid var(--border);border-radius:20px;padding:6px 16px;font-size:13px;color:var(--text3);cursor:pointer;transition:all 0.2s;}
-  .toggle-btn.active{background:var(--green-bg);border-color:var(--green-lt);color:var(--green2);font-weight:500;}
-  .worker-inputs{display:none;margin-top:14px;gap:10px;}
-  .worker-inputs.visible{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  .worker-inputs label{font-size:11px;color:var(--text3);display:block;margin-bottom:5px;font-family:var(--mono);letter-spacing:0.06em;text-transform:uppercase;}
-  .worker-inputs input{width:100%;padding:13px 10px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:22px;font-weight:700;color:var(--text);text-align:center;outline:none;-webkit-appearance:none;}
-  .worker-inputs input:focus{border-color:var(--green3);background:white;}
-  .summary{background:var(--green-bg);border:1px solid var(--green-lt);border-radius:12px;padding:16px;margin-top:8px;}
-  .summary-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--green-lt);font-size:14px;}
-  .summary-row:last-child{border-bottom:none;}
-  .summary-row .val{font-weight:600;color:var(--green2);font-family:var(--mono);}
-  .btn-send{display:block;width:100%;padding:18px;background:var(--green2);color:#e4eee0;border:none;border-radius:12px;font-size:16px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin-top:24px;transition:background 0.2s;}
-  .btn-send:hover{background:var(--green3);}
-  .btn-secondary{display:block;width:100%;padding:14px;background:var(--card);color:var(--text2);border:1.5px solid var(--border);border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px;text-align:center;}
-  /* Nuevo trabajador */
-  .btn-add-worker{width:100%;padding:14px;background:none;border:1.5px dashed var(--border);border-radius:12px;font-size:14px;color:var(--text3);cursor:pointer;margin-top:4px;box-shadow:none;}
-  .nuevo-form{display:none;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-top:8px;}
-  .nuevo-form input{width:100%;padding:12px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:16px;color:var(--text);outline:none;margin-bottom:10px;}
-  .nuevo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  /* Resultado */
-  #result-panel{display:none;text-align:center;padding:20px 0;}
-  #result-panel.visible{display:block;}
-  .result-icon{font-size:56px;margin-bottom:12px;}
-  .result-title{font-size:20px;font-weight:600;color:var(--green2);margin-bottom:8px;}
-  .result-sub{font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:20px;}
-  /* QR */
-  #qr-wrap{background:white;border-radius:16px;padding:20px;display:inline-block;margin:16px auto;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
-  #qr-wrap canvas,#qr-wrap img{display:block;}
-  .whatsapp-btn{display:block;width:100%;padding:16px;background:#25D366;color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;margin-top:12px;text-decoration:none;text-align:center;}
-  .copy-btn{display:block;width:100%;padding:13px;background:var(--green2);color:white;border:none;border-radius:12px;font-size:14px;cursor:pointer;margin-top:8px;}
-  .instrucciones{background:var(--amber-bg);border:1px solid #dcc870;border-radius:10px;padding:14px;margin-top:14px;text-align:left;}
-  .instrucciones p{font-size:13px;color:var(--amber);line-height:1.7;}
-  /* Toast */
-  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green2);color:white;padding:11px 22px;border-radius:8px;font-size:14px;opacity:0;transition:all 0.25s;pointer-events:none;z-index:999;}
-  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-  #toast.error{background:var(--red);}
-  .elim-btn{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px;line-height:1;}
-  #eliminados-wrap{display:none;margin-bottom:12px;}
-  .elim-recover-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:6px;text-align:left;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f2f0e8;font-family:-apple-system,sans-serif;color:#181810;padding-bottom:80px;}
+header{background:#243d20;padding:22px 20px;text-align:center;}
+header h1{color:#deecd8;font-size:20px;font-weight:500;}
+header p{color:#5a8054;font-size:11px;margin-top:5px;letter-spacing:0.15em;text-transform:uppercase;}
+.wrap{padding:20px 16px;max-width:500px;margin:0 auto;}
+.tit{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:#96967c;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid #d8d3c4;}
+.fecha-inp{width:100%;padding:14px;border:1.5px solid #d8d3c4;border-radius:10px;font-size:16px;background:#fafaf6;-webkit-appearance:none;color:#181810;}
+.wcard{background:#fafaf6;border:1.5px solid #d8d3c4;border-radius:12px;padding:16px;margin-bottom:12px;}
+.wcard.on{border-color:#cce3c4;background:#f6faf5;}
+.whead{display:flex;align-items:center;justify-content:space-between;}
+.wleft{display:flex;align-items:center;gap:10px;}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;flex-shrink:0;}
+.wname{font-size:16px;font-weight:600;}
+.wname input{border:none;background:none;font-size:16px;font-weight:600;color:#181810;outline:none;width:120px;}
+.activar{background:#f2f0e8;color:#96967c;border:1.5px solid #d8d3c4;border-radius:20px;padding:8px 18px;font-size:14px;cursor:pointer;}
+.activar.on{background:#345c2c;color:white;border-color:#345c2c;font-weight:600;}
+.del{background:none;border:none;color:#d8d3c4;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;margin-left:4px;}
+.fields{display:none;margin-top:14px;grid-template-columns:1fr 1fr;gap:10px;}
+.fields.on{display:grid;}
+.fields label{display:block;font-size:11px;color:#96967c;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;}
+.fields input{width:100%;padding:14px 8px;border:1.5px solid #d8d3c4;border-radius:8px;font-size:24px;font-weight:700;text-align:center;background:#f2f0e8;-webkit-appearance:none;color:#181810;}
+.btn-add{width:100%;padding:14px;background:none;border:2px dashed #d8d3c4;border-radius:12px;font-size:15px;color:#96967c;cursor:pointer;margin-top:4px;}
+.btn-send{width:100%;padding:18px;background:#345c2c;color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;margin-top:24px;}
+.note{font-size:12px;color:#96967c;text-align:center;margin-top:10px;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -79,302 +37,109 @@
   <h1>Registro de Jornada</h1>
   <p>Siega · Campaña 2026</p>
 </header>
-<div id="toast"></div>
-
-<div class="container">
-  <div id="form-section">
-    <div class="section-title">Datos de la jornada</div>
-    <div class="field">
-      <label>Fecha</label>
-      <input type="date" id="fecha-jornada">
-    </div>
-
-    <div class="section-title">Trabajadores</div>
-    <p style="font-size:13px;color:var(--text3);margin-bottom:16px;">Activa cada trabajador que haya trabajado hoy e introduce sus kilos y horas.</p>
-
-    <div id="workers-container"></div>
-
-    <!-- Añadir nuevo -->
-    <div id="nuevo-worker-wrap" style="margin-top:4px;">
-      <button class="btn-add-worker" onclick="mostrarNuevo()">+ Añadir trabajador nuevo</button>
-      <div class="nuevo-form" id="nuevo-form">
-        <div id="eliminados-wrap">
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Trabajadores anteriores</div>
-          <div id="eliminados-list"></div>
-          <div style="border-top:1px solid var(--border);margin:10px 0;"></div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">O añadir uno nuevo</div>
-        </div>
-        <div style="font-size:13px;color:var(--text2);font-weight:500;margin-bottom:10px;">Nombre</div>
-        <input type="text" id="nuevo-nombre" placeholder="Nombre completo">
-        <div class="nuevo-grid">
-          <div>
-            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Kilos</div>
-            <input type="number" id="nuevo-kg" placeholder="0" min="0" step="0.1" inputmode="decimal" style="text-align:center;font-size:20px;font-weight:700;">
-          </div>
-          <div>
-            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Horas</div>
-            <input type="number" id="nuevo-horas" value="7" min="0.5" max="16" step="0.5" inputmode="decimal" style="text-align:center;font-size:20px;font-weight:700;">
-          </div>
-        </div>
-        <div class="nuevo-grid" style="margin-top:10px;">
-          <button onclick="confirmarNuevo()" style="padding:12px;background:var(--green2);color:#e4eee0;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">✓ Añadir</button>
-          <button onclick="cancelarNuevo()" style="padding:12px;background:none;border:1.5px solid var(--border);border-radius:8px;font-size:14px;color:var(--text3);cursor:pointer;">Cancelar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Resumen -->
-    <div id="summary-wrap" style="display:none;margin-top:20px;">
-      <div class="section-title">Resumen</div>
-      <div class="summary" id="summary-panel"></div>
-    </div>
-
-    <button class="btn-send" onclick="generarEnlace()">Generar enlace y QR</button>
-  </div>
-
-  <!-- RESULTADO -->
-  <div id="result-panel">
-    <div class="result-icon">✅</div>
-    <div class="result-title">Jornada lista</div>
-    <div class="result-sub">Escanea el QR o envía el enlace por WhatsApp.<br>Al abrirlo en la app, los datos se importan automáticamente.</div>
-
-    <div id="qr-wrap"><div id="qrcode"></div></div>
-
-    <a id="whatsapp-btn" class="whatsapp-btn" href="#" target="_blank">📲 Enviar por WhatsApp</a>
-    <button class="copy-btn" onclick="copiarEnlace()">📋 Copiar enlace</button>
-
-    <div class="instrucciones">
-      <p><strong>¿Cómo importar?</strong><br>
-      1. Abre el enlace en el navegador donde usas la app de gestión<br>
-      2. Los datos se añaden automáticamente<br>
-      3. También puedes escanear el QR con ese dispositivo</p>
-    </div>
-
-    <button class="btn-secondary" onclick="resetForm()" style="margin-top:16px;">Registrar otra jornada</button>
-  </div>
+<div class="wrap">
+  <div class="tit">Fecha</div>
+  <input type="date" class="fecha-inp" id="fecha">
+  <div class="tit">Trabajadores</div>
+  <div id="lista"></div>
+  <button class="btn-add" id="btnadd">+ Añadir trabajador</button>
+  <button class="btn-send" onclick="enviar()">Enviar por WhatsApp</button>
+  <p class="note">Al pulsar se abrirá WhatsApp con el resumen listo para enviar.</p>
 </div>
-
 <script>
-const LS_FORM = 'siega_formulario_workers';
-const BASE_TRABAJADORES = [
-  { nombre:'Fernando', color:'#345c2c' },
-  { nombre:'Jose',     color:'#2563a8' },
-  { nombre:'Carlos',   color:'#8a3020' },
-  { nombre:'Rafael',   color:'#6a4a1c' },
-  { nombre:'Manuel',   color:'#1a5050' },
+var BASE=[
+  {n:'Fernando',c:'#345c2c'},
+  {n:'Jose',c:'#2563a8'},
+  {n:'Carlos',c:'#8a3020'},
+  {n:'Rafael',c:'#6a4a1c'},
+  {n:'Manuel',c:'#1a5050'}
 ];
-const EXTRA_COLORS = ['#2a6040','#6a2060','#206060','#604020','#202060'];
+var COLS=['#2a6040','#6a2060','#206060','#604020','#202060'];
+var ids=[];
+var uid=0;
 
-let trabajadores = [], eliminados = [];
-const estado = {};
+function addWorker(nombre,color){
+  var id='w'+(uid++);
+  ids.push(id);
+  var ini=(nombre||'?').substring(0,2).toUpperCase();
+  var col=color||COLS[uid%COLS.length];
+  var isBase=!!nombre;
+  var div=document.createElement('div');
+  div.className='wcard';
+  div.id=id;
+  div.innerHTML=
+    '<div class="whead">'+
+      '<div class="wleft">'+
+        '<div class="av" style="background:'+col+'">'+ini+'</div>'+
+        '<div class="wname">'+(isBase?nombre:'<input type="text" placeholder="Nombre" id="name_'+id+'">')+'</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;">'+
+        '<button class="activar" id="btn_'+id+'" onclick="toggle(\''+id+'\')">Activar</button>'+
+        (!isBase?'<button class="del" onclick="removeWorker(\''+id+'\')">×</button>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="fields" id="fields_'+id+'">'+
+      '<div><label>Kilos</label><input type="number" id="kg_'+id+'" placeholder="0" min="0" step="0.1" inputmode="decimal"></div>'+
+      '<div><label>Horas</label><input type="number" id="h_'+id+'" value="7" min="0.5" max="16" step="0.5" inputmode="decimal"></div>'+
+    '</div>';
+  document.getElementById('lista').appendChild(div);
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    const raw = localStorage.getItem(LS_FORM);
-    if (raw) {
-      const d = JSON.parse(raw);
-      if (d.activos && d.activos.length > 0) {
-        trabajadores = d.activos;
-        eliminados   = d.eliminados || [];
-      }
-    }
-  } catch(e) {}
-  if (!trabajadores.length) {
-    trabajadores = JSON.parse(JSON.stringify(BASE_TRABAJADORES));
-    eliminados   = [];
-    guardarLista();
+function toggle(id){
+  var btn=document.getElementById('btn_'+id);
+  var fields=document.getElementById('fields_'+id);
+  var card=document.getElementById(id);
+  var isOn=btn.className.indexOf(' on')>=0;
+  if(isOn){
+    btn.className='activar';btn.textContent='Activar';
+    fields.className='fields';card.className='wcard';
+  } else {
+    btn.className='activar on';btn.textContent='✓ Activo';
+    fields.className='fields on';card.className='wcard on';
+    setTimeout(function(){var kg=document.getElementById('kg_'+id);if(kg)kg.focus();},100);
   }
-  trabajadores.forEach(w => { estado[w.nombre] = { activo:false, kg:0, horas:7 }; });
-  document.getElementById('fecha-jornada').value = new Date().toISOString().split('T')[0];
-  renderWorkers();
-});
-
-function guardarLista() {
-  localStorage.setItem(LS_FORM, JSON.stringify({ activos:trabajadores, eliminados }));
 }
 
-function renderWorkers() {
-  document.getElementById('workers-container').innerHTML = trabajadores.map(w => {
-    const ini = w.nombre.slice(0,2).toUpperCase();
-    if (!estado[w.nombre]) estado[w.nombre] = { activo:false, kg:0, horas:7 };
-    return `
-    <div class="worker-card inactive" id="card-${w.nombre}">
-      <div class="worker-header">
-        <div class="worker-name">
-          <div class="worker-avatar" style="background:${w.color}">${ini}</div>
-          <div class="worker-label">${w.nombre}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button class="toggle-btn" id="toggle-${w.nombre}" onclick="toggleWorker('${w.nombre}')">+ Añadir</button>
-          <button class="elim-btn" onclick="eliminarWorker('${w.nombre}')" title="Eliminar">×</button>
-        </div>
-      </div>
-      <div class="worker-inputs" id="inputs-${w.nombre}">
-        <div>
-          <label>Kilos</label>
-          <input type="number" id="kg-${w.nombre}" value="" min="0" step="0.1" placeholder="0" inputmode="decimal"
-            oninput="estado['${w.nombre}'].kg=parseFloat(this.value)||0;actualizarResumen()">
-        </div>
-        <div>
-          <label>Horas</label>
-          <input type="number" id="h-${w.nombre}" value="7" min="0.5" max="16" step="0.5" inputmode="decimal"
-            oninput="estado['${w.nombre}'].horas=parseFloat(this.value)||7;actualizarResumen()">
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+function removeWorker(id){
+  var el=document.getElementById(id);
+  if(el)el.remove();
+  ids=ids.filter(function(i){return i!==id;});
 }
 
-function toggleWorker(nombre) {
-  const activo = !estado[nombre].activo;
-  estado[nombre].activo = activo;
-  document.getElementById('card-'+nombre).className = 'worker-card'+(activo?' active':' inactive');
-  document.getElementById('toggle-'+nombre).className = 'toggle-btn'+(activo?' active':'');
-  document.getElementById('toggle-'+nombre).textContent = activo?'✓ Activo':'+ Añadir';
-  document.getElementById('inputs-'+nombre).className = 'worker-inputs'+(activo?' visible':'');
-  if (activo) setTimeout(()=>document.getElementById('kg-'+nombre).focus(),150);
-  actualizarResumen();
+function enviar(){
+  var fecha=document.getElementById('fecha').value;
+  if(!fecha){alert('Introduce la fecha');return;}
+  var activos=[];var totKg=0;
+  for(var i=0;i<ids.length;i++){
+    var id=ids[i];
+    if(!document.getElementById(id))continue;
+    var btn=document.getElementById('btn_'+id);
+    if(!btn||btn.className.indexOf(' on')<0)continue;
+    var nEl=document.getElementById('name_'+id);
+    var nombre=nEl?nEl.value.trim():(document.getElementById(id).querySelector('.wname').textContent.trim());
+    var kg=parseFloat((document.getElementById('kg_'+id)||{}).value)||0;
+    var h=parseFloat((document.getElementById('h_'+id)||{}).value)||7;
+    if(nombre&&kg>0){activos.push({n:nombre,kg:kg,h:h});totKg+=kg;}
+  }
+  if(!activos.length){alert('Activa al menos un trabajador con kilos');return;}
+  var sep='─────────────────';
+  var txt='🌿 Jornada '+fecha+'\n'+sep+'\n';
+  for(var j=0;j<activos.length;j++){
+    var nom=activos[j].n;while(nom.length<10)nom+=' ';
+    txt+=nom+activos[j].kg.toFixed(1)+' kg · '+activos[j].h+'h\n';
+  }
+  txt+=sep+'\nTotal:     '+totKg.toFixed(1)+' kg';
+  var a=document.createElement('a');
+  a.href='https://wa.me/?text='+encodeURIComponent(txt);
+  a.target='_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
-function eliminarWorker(nombre) {
-  if (!confirm('¿Eliminar a '+nombre+' de la lista?')) return;
-  const w = trabajadores.find(t=>t.nombre===nombre);
-  trabajadores = trabajadores.filter(t=>t.nombre!==nombre);
-  if (w && !eliminados.find(e=>e.nombre===nombre)) eliminados.push(w);
-  delete estado[nombre];
-  guardarLista(); renderWorkers(); actualizarResumen();
-  mostrarToast(nombre+' eliminado');
-}
-
-function actualizarResumen() {
-  const activos = trabajadores.filter(w=>estado[w.nombre]?.activo);
-  const wrap = document.getElementById('summary-wrap');
-  if (!activos.length) { wrap.style.display='none'; return; }
-  wrap.style.display='block';
-  const totKg = activos.reduce((s,w)=>s+(estado[w.nombre]?.kg||0),0);
-  document.getElementById('summary-panel').innerHTML =
-    activos.map(w=>{
-      const kg=estado[w.nombre]?.kg||0, h=estado[w.nombre]?.horas||7;
-      return `<div class="summary-row"><span>${w.nombre}</span><span class="val">${kg.toFixed(1)} kg · ${(kg/h).toFixed(1)} kg/h</span></div>`;
-    }).join('')
-    +`<div class="summary-row" style="border-top:2px solid var(--green-lt);margin-top:4px;padding-top:8px;"><span><strong>Total</strong></span><span class="val">${totKg.toFixed(1)} kg</span></div>`;
-}
-
-// NUEVO TRABAJADOR
-function mostrarNuevo() {
-  document.getElementById('nuevo-form').style.display='block';
-  document.querySelector('.btn-add-worker').style.display='none';
-  const wrap=document.getElementById('eliminados-wrap');
-  if (eliminados.length) {
-    wrap.style.display='block';
-    document.getElementById('eliminados-list').innerHTML=eliminados.map(w=>`
-      <button class="elim-recover-btn" onclick="recuperar('${w.nombre}')">
-        <div style="width:28px;height:28px;border-radius:50%;background:${w.color};display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">${w.nombre.slice(0,2).toUpperCase()}</div>
-        <span>${w.nombre}</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--green2);">Recuperar →</span>
-      </button>`).join('');
-  } else { wrap.style.display='none'; }
-  setTimeout(()=>document.getElementById('nuevo-nombre').focus(),150);
-}
-
-function cancelarNuevo() {
-  document.getElementById('nuevo-form').style.display='none';
-  document.querySelector('.btn-add-worker').style.display='block';
-  document.getElementById('nuevo-nombre').value='';
-  document.getElementById('nuevo-kg').value='';
-  document.getElementById('nuevo-horas').value='7';
-}
-
-function confirmarNuevo() {
-  const nombre=document.getElementById('nuevo-nombre').value.trim();
-  const kg=parseFloat(document.getElementById('nuevo-kg').value)||0;
-  const horas=parseFloat(document.getElementById('nuevo-horas').value)||7;
-  if (!nombre){mostrarToast('Escribe el nombre',true);return;}
-  if (trabajadores.find(w=>w.nombre.toLowerCase()===nombre.toLowerCase())){mostrarToast('Ya está en la lista',true);return;}
-  const color=EXTRA_COLORS[trabajadores.length%EXTRA_COLORS.length];
-  trabajadores.push({nombre,color});
-  estado[nombre]={activo:true,kg,horas};
-  guardarLista(); cancelarNuevo(); renderWorkers();
-  setTimeout(()=>{
-    const c=document.getElementById('card-'+nombre);
-    if(c){c.className='worker-card active';document.getElementById('toggle-'+nombre).className='toggle-btn active';document.getElementById('toggle-'+nombre).textContent='✓ Activo';document.getElementById('inputs-'+nombre).className='worker-inputs visible';const ki=document.getElementById('kg-'+nombre);if(ki)ki.value=kg||'';}
-    actualizarResumen();
-  },50);
-  mostrarToast(nombre+' añadido');
-}
-
-function recuperar(nombre) {
-  const w=eliminados.find(e=>e.nombre===nombre);
-  if(!w)return;
-  eliminados=eliminados.filter(e=>e.nombre!==nombre);
-  trabajadores.push(w);
-  estado[w.nombre]={activo:true,kg:0,horas:7};
-  guardarLista(); cancelarNuevo(); renderWorkers();
-  setTimeout(()=>{
-    const c=document.getElementById('card-'+w.nombre);
-    if(c){c.className='worker-card active';document.getElementById('toggle-'+w.nombre).className='toggle-btn active';document.getElementById('toggle-'+w.nombre).textContent='✓ Activo';document.getElementById('inputs-'+w.nombre).className='worker-inputs visible';}
-    actualizarResumen();
-  },50);
-  mostrarToast(nombre+' recuperado');
-}
-
-// GENERAR ENLACE Y QR
-function generarEnlace() {
-  const fecha=document.getElementById('fecha-jornada').value;
-  const activos=trabajadores.filter(w=>estado[w.nombre]?.activo&&(estado[w.nombre]?.kg||0)>0);
-  if(!fecha){mostrarToast('Introduce la fecha',true);return;}
-  if(!activos.length){mostrarToast('Activa al menos un trabajador con kg > 0',true);return;}
-
-  const workers=activos.map(w=>({nombre:w.nombre,kg:estado[w.nombre].kg,horas:estado[w.nombre].horas}));
-  const totKg=workers.reduce((s,w)=>s+w.kg,0);
-  const totHoras=workers.reduce((s,w)=>s+w.horas,0);
-
-  const jornada={fecha,precioVenta:1,costeAdicional:0,workers,totKg,totHoras,
-    totCoste:0,totOtros:0,totValor:totKg,margen:0,benefNeto:0,
-    kph:totHoras>0?totKg/totHoras:0};
-
-  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(jornada))));
-  // URL apunta a la app de gestión con el parámetro de importación
-  const url='gestion_siega_tomillo_v5.html?importar='+encoded;
-
-  // Generar QR
-  document.getElementById('qrcode').innerHTML='';
-  new QRCode(document.getElementById('qrcode'),{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M});
-
-  // WhatsApp
-  const msg='🌿 Jornada '+fecha+' · '+totKg.toFixed(1)+' kg\n'+workers.map(w=>w.nombre+': '+w.kg.toFixed(1)+' kg').join('\n')+'\n\nImportar: '+url;
-  document.getElementById('whatsapp-btn').href='https://wa.me/?text='+encodeURIComponent(msg);
-
-  // Guardar URL para copiar
-  document.getElementById('whatsapp-btn').dataset.url=url;
-
-  document.getElementById('form-section').style.display='none';
-  document.getElementById('result-panel').className='visible';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function copiarEnlace() {
-  const url=document.getElementById('whatsapp-btn').dataset.url||'';
-  navigator.clipboard.writeText(url).then(()=>mostrarToast('Enlace copiado')).catch(()=>{
-    const el=document.createElement('textarea');el.value=url;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);mostrarToast('Enlace copiado');
-  });
-}
-
-function resetForm() {
-  trabajadores.forEach(w=>{estado[w.nombre]={activo:false,kg:0,horas:7};});
-  renderWorkers();
-  document.getElementById('summary-wrap').style.display='none';
-  document.getElementById('result-panel').className='';
-  document.getElementById('form-section').style.display='block';
-  document.getElementById('fecha-jornada').value=new Date().toISOString().split('T')[0];
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function mostrarToast(msg,error=false) {
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='show'+(error?' error':'');
-  setTimeout(()=>t.className='',3000);
-}
+BASE.forEach(function(w){addWorker(w.n,w.c);});
+document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+document.getElementById('btnadd').addEventListener('click',function(){addWorker('','');});
 </script>
 </body>
 </html>
