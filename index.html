@@ -256,9 +256,16 @@ const EXTRA_COLORS = ['#2a6040','#6a2060','#206060','#604020','#202060','#406020
 function cargarLista() {
   try {
     const raw = localStorage.getItem(LS_FORM);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const data = JSON.parse(raw);
+      // Si tiene activos con al menos un trabajador, usar datos guardados
+      if (data.activos && data.activos.length > 0) return data;
+    }
   } catch(e) {}
-  return { activos: JSON.parse(JSON.stringify(BASE_TRABAJADORES)), eliminados: [] };
+  // Primera vez — usar lista base y guardarla
+  const inicial = { activos: JSON.parse(JSON.stringify(BASE_TRABAJADORES)), eliminados: [] };
+  localStorage.setItem(LS_FORM, JSON.stringify(inicial));
+  return inicial;
 }
 function guardarLista() {
   localStorage.setItem(LS_FORM, JSON.stringify({ activos: trabajadores, eliminados }));
