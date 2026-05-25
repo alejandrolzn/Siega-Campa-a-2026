@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Siega — Tomillo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@300;400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+/* LOGIN SCREEN */
+#login-screen {
+  position:fixed;inset:0;background:linear-gradient(135deg,#1a3018 0%,#243d20 60%,#2a4a24 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+#login-screen.hidden { display:none; }
+.login-box {
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);
+  border-radius:20px;padding:48px 40px;text-align:center;max-width:380px;width:90%;
+  box-shadow:0 24px 48px rgba(0,0,0,0.3);
+}
+.login-logo { font-family:'Playfair Display',serif;font-size:28px;color:#deecd8;margin-bottom:6px; }
+.login-logo em { font-style:italic;color:#9acc90; }
+.login-sub { font-size:10px;color:#5a8054;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:32px; }
+.login-title { font-size:16px;color:#b0d0a8;margin-bottom:8px;font-family:'Playfair Display',serif; }
+.login-desc { font-size:13px;color:#4a6a44;margin-bottom:32px;line-height:1.6; }
+.btn-google {
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  width:100%;padding:16px;background:white;color:#3c4043;border:none;border-radius:10px;
+  font-size:15px;font-weight:500;cursor:pointer;transition:box-shadow 0.2s;
+}
+.btn-google:hover { box-shadow:0 4px 16px rgba(0,0,0,0.2); }
+.btn-google svg { width:20px;height:20px;flex-shrink:0; }
+.login-loading { color:#5a8054;font-size:13px;margin-top:16px;font-family:'JetBrains Mono',monospace; }
+.login-error { color:#d06040;font-size:12px;margin-top:12px; }
+/* ACCESS DENIED */
+#access-denied {
+  position:fixed;inset:0;background:linear-gradient(135deg,#1a3018 0%,#243d20 100%);
+  display:none;align-items:center;justify-content:center;z-index:9999;
+}
+#access-denied.visible { display:flex; }
+.denied-box { background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:40px;text-align:center;max-width:380px;width:90%; }
+.denied-icon { font-size:48px;margin-bottom:16px; }
+.denied-title { font-family:'Playfair Display',serif;font-size:22px;color:#deecd8;margin-bottom:8px; }
+.denied-sub { font-size:13px;color:#4a6a44;line-height:1.6;margin-bottom:24px; }
+.btn-logout { background:none;border:1px solid rgba(255,255,255,0.2);color:#b0d0a8;padding:10px 24px;border-radius:8px;font-size:13px;cursor:pointer; }
+</style>
+<style>
+:root {
+  --bg:#f2f0e8; --bg2:#e8e5da; --bg3:#dedad0; --card:#fafaf6;
+  --border:#d8d3c4; --border2:#c4bead;
+  --green:#243d20; --green2:#345c2c; --green3:#4a7a40;
+  --green-bg:#eaf3e6; --green-lt:#cce3c4;
+  --amber:#7a5e18; --amber-bg:#fdf0d4;
+  --red:#7a2c1c; --red-bg:#fde8e4;
+  --text:#181810; --text2:#4e4e3c; --text3:#96967c;
+  --mono:'JetBrains Mono',monospace;
+  --shadow-sm:0 1px 3px rgba(30,40,20,0.06),0 1px 2px rgba(30,40,20,0.04);
+  --shadow-md:0 4px 12px rgba(30,40,20,0.08),0 2px 4px rgba(30,40,20,0.04);
+  --shadow-lg:0 8px 24px rgba(30,40,20,0.10),0 3px 8px rgba(30,40,20,0.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;min-height:100vh;background-image:radial-gradient(ellipse at 0% 0%,rgba(60,90,50,0.04) 0%,transparent 60%),radial-gradient(ellipse at 100% 100%,rgba(60,90,50,0.03) 0%,transparent 50%);}
+
+/* STICKY BAR */
+#sticky-bar{position:sticky;top:0;z-index:200;background:linear-gradient(90deg,#1a3018 0%,#243d20 100%);border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;padding:0 40px;height:40px;box-shadow:0 2px 10px rgba(10,20,10,0.2);}
+.sbar-item{display:flex;align-items:center;gap:8px;padding:0 18px;border-right:1px solid rgba(255,255,255,0.07);height:100%;}
+.sbar-item:last-child{border-right:none;margin-left:auto;}
+.sbar-label{font-family:var(--mono);font-size:8px;letter-spacing:0.25em;text-transform:uppercase;color:#4a6a44;}
+.sbar-val{font-family:'Playfair Display',serif;font-size:15px;color:#c8e0c0;}
+.sbar-val.green{color:#7acc70}.sbar-val.red{color:#d06040}
+.sbar-prog-wrap{width:90px;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;}
+.sbar-prog-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#4a7a40,#7acc70);transition:width .6s ease;}
+.sbar-prog-pct{font-family:var(--mono);font-size:9px;color:#6a9a60;}
+.sbar-autosave{font-family:var(--mono);font-size:8px;color:#3a5a34;letter-spacing:0.12em;}
+.sbar-autosave.saved{color:#6a9a60;}
+
+/* HEADER */
+header{background:linear-gradient(135deg,var(--green) 0%,#1a3018 60%,#243820 100%);padding:22px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(20,35,15,0.18);position:relative;overflow:hidden;}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(160,210,140,0.3),transparent);}
+.brand{font-family:'Playfair Display',serif;font-size:22px;color:#deecd8;letter-spacing:0.02em;}
+.brand em{font-style:italic;color:#9acc90;}
+.header-right{text-align:right;}
+.header-date{font-family:var(--mono);font-size:11px;color:#8ab888;letter-spacing:0.18em;}
+.header-sub{font-size:9px;color:#5a8054;letter-spacing:0.3em;text-transform:uppercase;margin-top:3px;font-family:'Outfit',sans-serif;font-weight:300;}
+
+/* NAV */
+nav{background:linear-gradient(180deg,#1e3419 0%,var(--green) 100%);border-top:1px solid rgba(255,255,255,0.06);display:flex;padding:0 40px;}
+.nav-tab{font-family:'Outfit',sans-serif;font-size:10px;font-weight:400;letter-spacing:0.2em;text-transform:uppercase;color:#587a52;padding:13px 22px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s,background .2s;}
+.nav-tab:hover{color:#b0d0a8;background:rgba(255,255,255,0.03);}
+.nav-tab.active{color:#d8ecd0;border-bottom-color:#8acc78;background:rgba(255,255,255,0.05);}
+
+/* MAIN */
+main{padding:32px 40px;}
+.page{display:none;}
+.page.active{display:block;}
+.section{margin-bottom:28px;}
+.section-label{font-size:9px;letter-spacing:0.42em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;padding-bottom:9px;border-bottom:1px solid var(--border);font-family:var(--mono);}
+
+/* OBJETIVO BANNER */
+.obj-banner{background:linear-gradient(135deg,var(--green-bg),#f0f8ec);border:1px solid var(--green-lt);border-radius:12px;padding:16px 22px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.obj-banner-label{font-family:var(--mono);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--green2);}
+.obj-progress-bar{flex:1;min-width:180px;}
+.obj-bar-bg{height:8px;background:var(--bg3);border-radius:8px;overflow:hidden;margin-top:6px;}
+.obj-bar-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--green2),var(--green3));transition:width .8s cubic-bezier(.4,0,.2,1);}
+.obj-bar-fill.warn{background:linear-gradient(90deg,#c89030,#e0b040);}
+.obj-nums{font-family:'Playfair Display',serif;font-size:18px;color:var(--green2);}
+.obj-nums span{font-size:11px;color:var(--text3);font-family:var(--mono);}
+.obj-edit-btn{font-family:var(--mono);font-size:9px;color:var(--text3);background:var(--card);border:1px solid var(--border);padding:5px 12px;border-radius:6px;cursor:pointer;letter-spacing:0.1em;}
+.obj-edit-btn:hover{color:var(--green2);border-color:var(--green3);background:var(--green-bg);}
+
+/* METRIC CARDS */
+.metric-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;}
+.metric-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.metric-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.metric{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s;}
+.metric:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);border-radius:10px 10px 0 0;}
+.metric.good::before{background:linear-gradient(90deg,var(--green2),var(--green3));}
+.metric.warn::before{background:linear-gradient(90deg,#c89030,#e0b040);}
+.metric.bad::before{background:linear-gradient(90deg,#c84030,#e05040);}
+.metric-label{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;font-family:var(--mono);font-weight:300;}
+.metric-value{font-size:26px;font-family:'Playfair Display',serif;color:var(--text);line-height:1;}
+.metric-value.green{color:var(--green2)}.metric-value.amber{color:var(--amber)}.metric-value.red{color:var(--red)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono);font-weight:300;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px 26px;box-shadow:var(--shadow-sm);}
+.card-title{font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--text3);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-weight:300;}
+
+/* LAYOUT */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+
+/* TABLAS */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{font-family:var(--mono);font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text3);text-align:left;padding:9px 12px;background:var(--bg2);border-bottom:1px solid var(--border);font-weight:300;}
+th:first-child{border-radius:6px 0 0 0;}th:last-child{border-radius:0 6px 0 0;}
+td{padding:11px 12px;border-bottom:1px solid var(--bg2);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(60,90,50,0.03);}
+td.num{text-align:right;font-family:var(--mono);font-size:12px;font-weight:300;}
+td.muted{color:var(--text3);}
+td.green{color:var(--green2);font-family:var(--mono);text-align:right;}
+td.amber{color:var(--amber);font-family:var(--mono);text-align:right;}
+td.red{color:var(--red);font-family:var(--mono);text-align:right;}
+td input[type="number"],td input[type="text"]{width:80px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;text-align:right;border-radius:5px;outline:none;transition:border-color .2s;}
+td input[type="text"]{width:110px;text-align:left;}
+td input:focus{border-color:var(--green3);}
+
+/* INPUT ROWS */
+.input-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.input-row label{font-size:12px;color:var(--text2);flex:1;font-weight:300;}
+.input-row input[type="number"],.input-row input[type="text"],.input-row input[type="date"]{width:120px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:7px 10px;border-radius:6px;outline:none;transition:border-color .2s;}
+.input-row input:focus{border-color:var(--green3);box-shadow:0 0 0 3px rgba(74,122,64,0.10);}
+.input-row .unit{font-size:11px;color:var(--text3);font-family:var(--mono);min-width:28px;font-weight:300;}
+
+/* BADGES */
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:0.08em;padding:3px 9px;border-radius:20px;}
+.badge-green{background:var(--green-bg);color:var(--green2);border:1px solid var(--green-lt);}
+.badge-amber{background:var(--amber-bg);color:var(--amber);border:1px solid #dcc870;}
+.badge-red{background:var(--red-bg);color:var(--red);border:1px solid #dca090;}
+.dia-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-family:var(--mono);font-size:9px;letter-spacing:0.1em;}
+.dia-badge.guardado{background:var(--green-bg);color:var(--green2);border:1px solid var(--green-lt);}
+.dia-badge.nuevo{background:var(--amber-bg);color:var(--amber);border:1px solid #dcc870;}
+
+/* WORKER AVATAR */
+.worker-avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-family:var(--mono);font-size:10px;color:white;flex-shrink:0;}
+.worker-nota{font-size:11px;color:var(--text3);font-style:italic;font-family:'Playfair Display',serif;margin-top:4px;}
+
+/* BUTTONS */
+button{font-family:'Outfit',sans-serif;font-size:10px;font-weight:400;letter-spacing:0.14em;text-transform:uppercase;background:var(--card);border:1px solid var(--border2);color:var(--text2);padding:8px 18px;border-radius:6px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm);}
+button:hover{background:var(--bg2);color:var(--text);border-color:var(--green3);box-shadow:var(--shadow-md);}
+button.primary{background:var(--green2);color:#e4eee0;border-color:var(--green2);box-shadow:0 2px 8px rgba(36,61,32,0.25);}
+button.primary:hover{background:var(--green3);}
+button.danger{color:var(--red);border-color:transparent;background:transparent;font-size:13px;padding:4px 8px;letter-spacing:0;text-transform:none;box-shadow:none;}
+button.danger:hover{background:var(--red-bg);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* RESULT LINE */
+.result-line{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;border-top:1px solid var(--border);margin-top:10px;}
+.result-line span{font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;font-weight:300;}
+.result-line strong{font-family:'Playfair Display',serif;font-size:21px;color:var(--green2);font-weight:400;}
+
+.flex-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;}
+.kpi-bar-bg{flex:1;height:4px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.kpi-bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,var(--green2),var(--green3));}
+.kpi-bar-fill.warn{background:linear-gradient(90deg,#c89030,#e0a030);}
+.nota{font-size:11px;color:var(--text3);font-style:italic;font-family:'Playfair Display',serif;margin-top:12px;line-height:1.7;}
+
+/* INSIGHT / MEJORA CARDS */
+.insight-card{background:linear-gradient(135deg,#eef6ea 0%,var(--green-bg) 100%);border:1px solid var(--green-lt);border-radius:10px;padding:18px 22px;margin-bottom:12px;}
+.insight-title{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--green2);font-family:var(--mono);margin-bottom:7px;font-weight:300;}
+.insight-text{font-size:13px;color:var(--text);line-height:1.65;font-family:'Playfair Display',serif;font-style:italic;}
+.mejora-card{background:linear-gradient(135deg,#fdf6e4 0%,var(--amber-bg) 100%);border:1px solid #e0cc80;border-radius:10px;padding:18px 22px;margin-bottom:12px;}
+.mejora-title{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--amber);font-family:var(--mono);margin-bottom:7px;font-weight:300;}
+.mejora-text{font-size:13px;color:var(--text2);line-height:1.65;font-weight:300;}
+
+/* CHARTS */
+.chart-wrap{position:relative;height:260px;}
+
+/* TREND */
+.trend-up{color:var(--green2);font-size:11px;}.trend-down{color:var(--red);font-size:11px;}.trend-flat{color:var(--text3);font-size:11px;}
+
+/* WEEK / MONTH NAV */
+.week-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.week-nav button{padding:5px 12px;font-size:9px;}
+.week-nav-label{font-family:var(--mono);font-size:11px;color:var(--text2);min-width:180px;text-align:center;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green2);color:#e4eee0;font-family:var(--mono);font-size:11px;letter-spacing:0.06em;padding:11px 22px;border-radius:8px;box-shadow:0 4px 16px rgba(20,35,15,0.22);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;z-index:9999;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,30,15,0.55);z-index:5000;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:30px 32px;box-shadow:var(--shadow-lg);min-width:340px;max-width:520px;width:90%;}
+.modal-title{font-family:'Playfair Display',serif;font-size:20px;margin-bottom:18px;color:var(--green);}
+.modal-close{float:right;background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;box-shadow:none;padding:0;margin-top:-4px;}
+
+@media print{nav,button,.flex-row,#sticky-bar{display:none!important;}.page{display:block!important;page-break-after:always;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Siega · <em>Thymus vulgaris</em></div>
+    <div class="login-sub">Campaña 2026</div>
+    <div class="login-title">Control de Producción</div>
+    <div class="login-desc">Accede con tu cuenta de Google para ver y gestionar los datos de producción.</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continuar con Google
+    </button>
+    <div class="login-loading" id="login-loading" style="display:none;">Verificando acceso...</div>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ACCESS DENIED -->
+<div id="access-denied">
+  <div class="denied-box">
+    <div class="denied-icon">🔒</div>
+    <div class="denied-title">Acceso restringido</div>
+    <div class="denied-sub">Tu cuenta no tiene permiso para acceder a esta aplicación. Contacta con el administrador.</div>
+    <button class="btn-logout" onclick="firebase.auth().signOut()">Cerrar sesión</button>
+  </div>
+</div>
+
+
+<header>
+  <div>
+    <div class="brand">Siega · <em>Thymus vulgaris</em></div>
+    <div class="header-sub" style="margin-top:3px;">Control de producción · Plantas aromáticas</div>
+  </div>
+  <div class="header-right" style="display:flex;align-items:center;gap:16px;">
+    <div>
+      <div class="header-date" id="fecha-hoy"></div>
+      <div class="header-sub" style="margin-top:4px;" id="semana-actual"></div>
+    </div>
+    <div id="user-info" style="text-align:right;">
+      <div style="font-family:var(--mono);font-size:9px;color:#5a8054;letter-spacing:0.1em;" id="user-email"></div>
+      <button onclick="firebase.auth().signOut()" style="background:none;border:none;color:#3a5a34;font-family:var(--mono);font-size:8px;cursor:pointer;letter-spacing:0.1em;padding:2px 0;">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+
+
+<div id="toast"></div>
+
+<div class="modal-overlay" id="modal-objetivo">
+  <div class="modal-box">
+    <button class="modal-close" onclick="cerrarModal('modal-objetivo')">✕</button>
+    <div class="modal-title">Objetivo mensual</div>
+    <div class="input-row"><label>Kg objetivo este mes</label><input type="number" id="obj-kg-input" value="10000" min="1" step="10"><span class="unit">kg</span></div>
+    <div class="flex-row">
+      <button class="primary" onclick="guardarObjetivo()">Guardar objetivo</button>
+      <button onclick="cerrarModal('modal-objetivo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+  <button class="nav-tab" onclick="showPage('diario',this)">Registro diario</button>
+  <button class="nav-tab" onclick="showPage('trabajadores',this)">Trabajadores</button>
+  <button class="nav-tab" onclick="showPage('graficas',this)">Gráficas</button>
+  <button class="nav-tab" onclick="showPage('semanal',this)">Resumen semanal</button>
+  <button class="nav-tab" onclick="showPage('mensual',this)">Resumen mensual</button>
+  <div style="flex:1"></div>
+  <button onclick="sincronizarSheets(this)" style="background:var(--green2);color:#e4eee0;border:none;border-radius:6px;padding:6px 16px;font-family:'Outfit',sans-serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;margin:auto 12px auto 0;transition:background .2s;">📥 Sincronizar</button>
+  <button class="nav-tab" onclick="borrarTodosLosDatos()" style="color:#7a4040;font-size:9px;letter-spacing:0.15em;">⚠ Borrar datos</button>
+</nav>
+
+<main>
+
+<!-- ═══ PÁGINA 0 · DASHBOARD ═══ -->
+<div class="page active" id="page-dashboard">
+
+  <!-- BLOQUE DÍA -->
+  <div class="section">
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Día seleccionado — <span id="dash-fecha-label" style="font-style:italic;"></span></span>
+      <div style="display:flex;gap:8px;" id="dash-dia-actions"></div>
+    </div>
+    <div class="metric-grid">
+      <div class="metric" id="d-m-kilos"><div class="metric-label">Kg recogidos</div><div class="metric-value green" id="d-kpi-kilos">0</div><div class="metric-sub">kg totales</div></div>
+      <div class="metric" id="d-m-coste"><div class="metric-label">Coste m.o.</div><div class="metric-value" id="d-kpi-coste">0,00 €</div><div class="metric-sub">pago trabajadores</div></div>
+      <div class="metric" id="d-m-valor"><div class="metric-label">Valor producido</div><div class="metric-value green" id="d-kpi-valor">0,00 €</div><div class="metric-sub">a precio verde</div></div>
+      <div class="metric" id="d-m-margen"><div class="metric-label">Margen bruto</div><div class="metric-value" id="d-kpi-margen">0,00 €</div><div class="metric-sub" id="d-kpi-margen-pct">0%</div></div>
+      <div class="metric" id="d-m-benef"><div class="metric-label">Beneficio neto</div><div class="metric-value" id="d-kpi-benef">0,00 €</div><div class="metric-sub">valor − coste − otros</div></div>
+      <div class="metric" id="d-m-mneto"><div class="metric-label">Margen neto</div><div class="metric-value" id="d-kpi-mneto">0,00 €</div><div class="metric-sub" id="d-kpi-mneto-pct">0%</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+      <div class="card" style="padding:16px 20px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Objetivo diario implícito</div>
+        <div id="dash-obj-diario" style="font-family:'Playfair Display',serif;font-size:22px;color:var(--amber);">—</div>
+      </div>
+      <div class="card" style="padding:16px 20px;">
+        <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Tendencia kg/h — semana vs anterior</div>
+        <div id="dash-tend-kph">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOQUE SEMANA -->
+  <div class="section">
+    <div class="section-label">Semana actual — <span id="dash-sem-label" style="font-style:italic;"></span></div>
+    <div class="obj-banner" style="margin-bottom:14px;">
+      <div>
+        <div class="obj-banner-label">Objetivo semanal</div>
+        <div class="obj-nums" id="dash-sem-obj-display">0 <span>/ — kg</span></div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px;" id="dash-sem-obj-sub"></div>
+      </div>
+      <div class="obj-progress-bar">
+        <div class="obj-bar-bg"><div class="obj-bar-fill" id="dash-sem-obj-fill" style="width:0%"></div></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px;" id="dash-sem-obj-pct">0%</div>
+        <div style="font-family:'Playfair Display',serif;font-size:15px;" id="dash-sem-obj-estado"></div>
+      </div>
+    </div>
+    <div class="metric-grid-4" style="margin-bottom:16px;">
+      <div class="metric good"><div class="metric-label">Kg semana</div><div class="metric-value green" id="dash-sem-kilos">0</div><div class="metric-sub">total semana</div></div>
+      <div class="metric"><div class="metric-label">Valor semana</div><div class="metric-value" id="dash-sem-valor">0,00 €</div><div class="metric-sub">a precio verde</div></div>
+      <div class="metric"><div class="metric-label">Coste semana</div><div class="metric-value" id="dash-sem-coste">0,00 €</div><div class="metric-sub">pago total</div></div>
+      <div class="metric good"><div class="metric-label">Margen semana</div><div class="metric-value green" id="dash-sem-margen">0,00 €</div><div class="metric-sub" id="dash-sem-margen-pct">0%</div></div>
+    </div>
+    <div style="margin-top:4px;">
+      <button onclick="toggleAnalisis('sem')" style="background:none;border:none;border-bottom:1px solid var(--border);width:100%;text-align:left;padding:10px 0;font-family:var(--mono);font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--text3);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:none;">
+        <span>Análisis y recomendaciones semanales</span>
+        <span id="sem-toggle-icon" style="font-size:12px;transition:transform 0.2s;">▼</span>
+      </button>
+      <div id="sem-analisis-content" style="display:none;margin-top:12px;">
+        <div class="two-col">
+          <div><div class="section-label" style="margin-bottom:10px;">Análisis semanal</div><div id="dash-insights-panel"></div></div>
+          <div><div class="section-label" style="margin-bottom:10px;">Recomendaciones semanales</div><div id="dash-mejoras-panel"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOQUE MES -->
+  <div class="section">
+    <div class="section-label">Mes actual — <span id="dash-mes-label" style="font-style:italic;"></span></div>
+    <div class="obj-banner" style="margin-bottom:14px;">
+      <div>
+        <div class="obj-banner-label">Objetivo mensual</div>
+        <div class="obj-nums" id="dash-mes-obj-display">0 <span>/ — kg</span></div>
+      </div>
+      <div class="obj-progress-bar">
+        <div class="obj-bar-bg"><div class="obj-bar-fill" id="dash-mes-obj-fill" style="width:0%"></div></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px;" id="dash-mes-obj-pct">0%</div>
+        <div style="font-family:'Playfair Display',serif;font-size:15px;" id="dash-mes-obj-estado"></div>
+      </div>
+      <button class="obj-edit-btn" onclick="abrirModal('modal-objetivo')">⚙ Editar objetivo</button>
+    </div>
+    <div class="metric-grid-4" style="margin-bottom:16px;">
+      <div class="metric good"><div class="metric-label">Kg mes</div><div class="metric-value green" id="dash-mes-kilos">0</div><div class="metric-sub">total mes</div></div>
+      <div class="metric"><div class="metric-label">Valor mes</div><div class="metric-value" id="dash-mes-valor">0,00 €</div><div class="metric-sub">a precio verde</div></div>
+      <div class="metric"><div class="metric-label">Coste mes</div><div class="metric-value" id="dash-mes-coste">0,00 €</div><div class="metric-sub">pago total</div></div>
+      <div class="metric good"><div class="metric-label">Margen mes</div><div class="metric-value green" id="dash-mes-margen">0,00 €</div><div class="metric-sub" id="dash-mes-margen-pct">0%</div></div>
+    </div>
+    <div style="margin-top:4px;">
+      <button onclick="toggleAnalisis('mes')" style="background:none;border:none;border-bottom:1px solid var(--border);width:100%;text-align:left;padding:10px 0;font-family:var(--mono);font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--text3);cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:none;">
+        <span>Análisis y recomendaciones mensuales</span>
+        <span id="mes-toggle-icon" style="font-size:12px;transition:transform 0.2s;">▼</span>
+      </button>
+      <div id="mes-analisis-content" style="display:none;margin-top:12px;">
+        <div class="two-col">
+          <div><div class="section-label" style="margin-bottom:10px;">Análisis mensual</div><div id="dash-mes-insights-panel"></div></div>
+          <div><div class="section-label" style="margin-bottom:10px;">Recomendaciones mensuales</div><div id="dash-mes-mejoras-panel"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ PÁGINA 1 · REGISTRO DIARIO ═══ -->
+<div class="page" id="page-diario">
+
+  <div class="section">
+    <div class="section-label">Parámetros del día</div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:20px;align-items:start;">
+        <div>
+          <div class="input-row"><label>Fecha</label><input type="date" id="fecha-jornada" onchange="resetDia()"></div>
+          <div style="margin-top:4px;" id="dia-estado-badge"></div>
+        </div>
+        <div>
+          <div class="input-row"><label>Precio venta (€/kg)</label><input type="number" id="precio-venta" value="1.00" step="0.05" oninput="recalcDia()"><span class="unit">€</span></div>
+        </div>
+        <div>
+          <div class="input-row"><label>Nº trabajadores activos</label><input type="number" id="num-workers" value="4" min="1" max="10" step="1" oninput="syncWorkers()"></div>
+          <div class="input-row"><label>Horas jornada (defecto)</label><input type="number" id="horas-defecto" value="7" min="0.5" max="16" step="0.5" oninput="syncWorkers()"><span class="unit">h</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding-top:4px;">
+          <button class="primary" onclick="guardarJornada()">Guardar jornada</button>
+          <button onclick="eliminarJornada()" id="btn-eliminar" style="font-size:9px;padding:5px 12px;color:var(--red);display:none;">✕ Eliminar jornada</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:20px;">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);">Costes adicionales del día (combustible, agua, etc.)</div>
+        <div class="input-row" style="margin-bottom:0;flex:none;">
+          <input type="number" id="coste-adicional-dia" value="0" min="0" step="0.5" style="width:90px;" oninput="recalcDia()">
+          <span class="unit">€</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="display:grid;grid-template-columns:3fr 2fr;gap:18px;">
+    <div class="card">
+      <div class="card-title" id="tabla-dia-titulo">Producción por trabajador</div>
+      <table>
+        <thead><tr>
+          <th>Trabajador</th><th style="text-align:right">Horas</th><th style="text-align:right">Kg recogidos</th>
+          <th style="text-align:right">Benef. bruto</th><th style="text-align:right">Coste m.o.</th>
+          <th style="text-align:right">Otros costes</th><th style="text-align:right">Benef. neto</th>
+          <th style="text-align:right">Margen</th><th></th>
+        </tr></thead>
+        <tbody id="workers-table"></tbody>
+        <tfoot><tr style="background:var(--bg2);">
+          <td style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--text3);padding:10px;">TOTAL</td>
+          <td class="num" id="tot-horas">—</td><td class="num green" id="tot-kilos">—</td>
+          <td class="num" id="tot-bbruto">—</td><td class="num" id="tot-coste">—</td>
+          <td class="num" id="tot-otros">—</td><td class="num" id="tot-benef">—</td>
+          <td class="num" id="tot-margen-pct">—</td><td></td>
+        </tr></tfoot>
+      </table>
+      <div class="flex-row"><button onclick="addWorkerRow()">+ Añadir trabajador</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card"><div class="card-title">Ratios del día</div><div id="ratios-panel"></div></div>
+      <div class="card"><div class="card-title">Rentabilidad del día</div><div id="rentabilidad-panel"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PÁGINA 2 · TRABAJADORES ═══ -->
+<div class="page" id="page-trabajadores">
+  <div class="section">
+    <div class="section-label">Ratios acumulados del equipo — toda la temporada</div>
+    <div class="three-col" style="margin-bottom:18px;">
+      <div class="card"><div class="card-title">Productividad media</div><div id="ratio-acum-productividad"></div></div>
+      <div class="card"><div class="card-title">Eficiencia económica</div><div id="ratio-acum-economia"></div></div>
+      <div class="card"><div class="card-title">Análisis evolutivo</div><div id="ratio-acum-evol"></div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-label">Ranking acumulado de trabajadores</div>
+    <div class="card">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Trabajador</th><th style="text-align:right">Jornadas</th>
+          <th style="text-align:right">Kg totales</th><th style="text-align:right">Horas totales</th>
+          <th style="text-align:right">Kg/hora</th><th style="text-align:right">€/hora</th><th style="text-align:right">Tendencia</th>
+          <th style="text-align:right">Coste total</th><th style="text-align:right">Coste/kg</th>
+          <th style="text-align:right">Valoración</th>
+        </tr></thead>
+        <tbody id="ranking-body"></tbody>
+      </table>
+      <p class="nota">Coste/kg: cuánto cuesta cada kilo recogido — cuanto más bajo, mejor. Tendencia: comparación entre primera y segunda mitad de jornadas.</p>
+    </div>
+  </div>
+  <div class="section two-col">
+    <div class="card">
+      <div class="card-title">Historial de jornadas</div>
+      <div style="margin-bottom:12px;">
+        <select id="filtro-semana-historial" onchange="renderHistorialJornadas()" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:6px;outline:none;cursor:pointer;"></select>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Fecha</th><th style="text-align:right">Trabajadores</th><th style="text-align:right">Kg totales</th>
+          <th style="text-align:right">Coste</th><th style="text-align:right">Margen</th>
+          <th style="text-align:right">Kg/h</th><th style="text-align:right">Acción</th>
+        </tr></thead>
+        <tbody id="historial-jornadas"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Añadir / editar trabajador del equipo</div>
+      <div class="input-row"><label>Nombre del trabajador</label><input type="text" id="new-worker-name" placeholder="Nombre"></div>
+      <div class="input-row"><label>Tarifa (€/kg recogido)</label><input type="number" id="new-worker-tarifa" value="0.50" min="0" step="0.01"><span class="unit">€/kg</span></div>
+      <div class="input-row"><label>Notas (opcional)</label><input type="text" id="new-worker-nota" placeholder="Observaciones..."></div>
+      <div class="flex-row"><button class="primary" onclick="addWorkerEquipo()">Añadir al equipo</button></div>
+      <div style="margin-top:20px;"><div class="card-title">Equipo registrado</div><div id="equipo-list"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PÁGINA 3 · GRÁFICAS ═══ -->
+<div class="page" id="page-graficas">
+  <div class="section card">
+    <div class="card-title">Kg recogidos y margen (€) — por jornada</div>
+    <div class="chart-wrap"><canvas id="chart-evol-kg-margen"></canvas></div>
+  </div>
+  <div class="section card">
+    <div class="card-title">Evolución del margen % — tendencia de rentabilidad</div>
+    <div class="chart-wrap"><canvas id="chart-margen-pct"></canvas></div>
+  </div>
+  <div class="section card">
+    <div class="card-title">Kg recogidos acumulados por trabajador</div>
+    <p class="nota" style="margin-top:0;margin-bottom:14px;">Una línea por trabajador — evolución acumulada a lo largo de toda la temporada.</p>
+    <div class="chart-wrap" style="height:300px;"><canvas id="chart-evol-worker-kph"></canvas></div>
+  </div>
+  <div class="section card">
+    <div class="card-title">Facturación · Coste · Beneficio neto — acumulados en el tiempo</div>
+    <p class="nota" style="margin-top:0;margin-bottom:14px;">La brecha entre facturación y coste es el beneficio acumulado. Si la distancia crece, el negocio mejora.</p>
+    <div class="chart-wrap" style="height:300px;"><canvas id="chart-triple-acum"></canvas></div>
+  </div>
+  <div class="section card">
+    <div class="card-title">Kg/hora del equipo — evolución de productividad</div>
+    <div class="chart-wrap"><canvas id="chart-kph-evol"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══ PÁGINA 4 · RESUMEN SEMANAL ═══ -->
+<div class="page" id="page-semanal">
+  <div class="week-nav">
+    <button onclick="semanaOffset--;renderSemanal()">← Semana anterior</button>
+    <div class="week-nav-label" id="week-nav-label">Semana actual</div>
+    <button onclick="if(semanaOffset<0){semanaOffset++;renderSemanal()}" id="btn-sem-next">Semana siguiente →</button>
+  </div>
+  <div class="section card">
+    <div class="card-title">Comparativa de jornadas de la semana</div>
+    <table>
+      <thead><tr>
+        <th>Día</th><th style="text-align:right">Trabajadores</th><th style="text-align:right">Kg totales</th>
+        <th style="text-align:right">Kg/h medio</th><th style="text-align:right">Coste</th>
+        <th style="text-align:right">Valor</th><th style="text-align:right">Margen</th>
+        <th style="text-align:right">Margen %</th><th style="text-align:right">Acción</th>
+      </tr></thead>
+      <tbody id="semana-tabla"></tbody>
+    </table>
+    <div class="flex-row" style="justify-content:flex-end;">
+      <button onclick="exportarCSV()">Exportar CSV</button>
+      <button onclick="exportarResumen()">Exportar TXT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PÁGINA 5 · RESUMEN MENSUAL ═══ -->
+<div class="page" id="page-mensual">
+  <div class="week-nav">
+    <button onclick="mesOffset--;renderMensual()">← Mes anterior</button>
+    <div class="week-nav-label" id="mes-nav-label">Mes actual</div>
+    <button onclick="if(mesOffset<0){mesOffset++;renderMensual()}" id="btn-mes-next">Mes siguiente →</button>
+  </div>
+  <div class="section card">
+    <div class="card-title">Comparativa de jornadas del mes</div>
+    <table>
+      <thead><tr>
+        <th>Día</th><th style="text-align:right">Trabajadores</th><th style="text-align:right">Kg totales</th>
+        <th style="text-align:right">Kg/h medio</th><th style="text-align:right">Coste</th>
+        <th style="text-align:right">Valor</th><th style="text-align:right">Margen</th>
+        <th style="text-align:right">Margen %</th><th style="text-align:right">Acción</th>
+      </tr></thead>
+      <tbody id="mes-tabla"></tbody>
+    </table>
+    <div class="flex-row" style="justify-content:flex-end;">
+      <button onclick="exportarCSVMes()">Exportar CSV</button>
+      <button onclick="exportarResumenMes()">Exportar TXT</button>
+    </div>
+  </div>
+</div>
+
+</main>
+<script>
+// ─── ESTADO ──────────────────────────────────────────
+const LS_KEY  = 'siega_tomillo_data';
+const LS_KEY2 = 'siega_tomillo_data_v4';
+
+const DEFAULT_EQUIPO = [
+  { nombre:'Fernando', tarifa:0.00, nota:'' },
+  { nombre:'Jose',     tarifa:0.60, nota:'' },
+  { nombre:'Carlos',   tarifa:0.50, nota:'' },
+  { nombre:'Rafael',   tarifa:0.50, nota:'' },
+];
+
+const WORKER_COLORS = ['#345c2c','#2563a8','#8a3020','#6a4a1c','#1a5050','#6a2a6a','#3a4a2c','#1a3060'];
+function workerColor(nombre) {
+  let h=0; for(let c of nombre) h=(h*31+c.charCodeAt(0))&0xffffffff;
+  return WORKER_COLORS[Math.abs(h)%WORKER_COLORS.length];
+}
+function getTarifa(nombre, fallback) {
+  const e=equipo.find(e=>e.nombre===nombre);
+  return e ? e.tarifa : (fallback!==undefined ? fallback : 0.50);
+}
+
+let equipo=[], workersDia=[], jornadas=[], charts={};
+let objetivoSemanal=10000, semanaOffset=0, mesOffset=0, autoSaveTimer=null;
+
+// ─── PERSISTENCIA ────────────────────────────────────
+function guardarEstado() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({equipo,jornadas,objetivoSemanal}));
+    flashAutosave();
+    // También guardar en Firestore
+    guardarEnFirestore();
+  } catch(e) { console.warn('No se pudo guardar',e); }
+}
+function cargarEstado() {
+  const keysToTry = [LS_KEY, LS_KEY2, 'siega_tomillo_data_v3', 'siega_tomillo_data_v5'];
+  for(const key of keysToTry) {
+    try {
+      const raw = localStorage.getItem(key);
+      if(!raw) continue;
+      const data = JSON.parse(raw);
+      if(data.jornadas && data.jornadas.length >= 0) {
+        equipo          = data.equipo   || DEFAULT_EQUIPO;
+        jornadas        = data.jornadas || [];
+        // Si el objetivo guardado era el default antiguo (500), actualizarlo a 10000
+        objetivoSemanal = (!data.objetivoSemanal || data.objetivoSemanal === 500)
+          ? 10000
+          : data.objetivoSemanal;
+        if(key !== LS_KEY) guardarEstado();
+        return true;
+      }
+    } catch(e) { continue; }
+  }
+  return false;
+}
+function borrarTodosLosDatos() {
+  if(!confirm('¿Seguro que quieres borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
+  localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY2);
+  equipo=DEFAULT_EQUIPO.map(e=>({...e})); jornadas=[]; workersDia=[]; objetivoSemanal=10000;
+  // Borrar también de Firestore
+  if(currentUser) db.collection('siega').doc('datos').delete().catch(e=>console.error(e));
+  syncWorkers(); renderEquipoList(); renderRanking(); renderHistorialJornadas();
+  actualizarStickyBar(); actualizarRatiosAcumulados();
+  mostrarToast('Todos los datos borrados.');
+}
+function mostrarToast(msg,tipo='ok') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=tipo==='ok'?'var(--green2)':'#8a3020';
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3200);
+}
+function flashAutosave() {
+  const el=document.getElementById('sb-autosave');
+  el.textContent='✓ Guardado'; el.classList.add('saved');
+  setTimeout(()=>{el.textContent='Auto-guardado activo';el.classList.remove('saved');},2000);
+}
+function scheduleAutoSave() {
+  if(autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(guardarEstado,30000);
+}
+
+// ─── UTILS ───────────────────────────────────────────
+function eur(n) { return parseFloat(n).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function num(n,d=2) { return parseFloat(n||0).toFixed(d); }
+function getVal(id) { return parseFloat(document.getElementById(id).value)||0; }
+function getStr(id) { return document.getElementById(id).value.trim(); }
+function today() { return new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function semanaNum() { const d=new Date(),f=new Date(d.getFullYear(),0,1); return Math.ceil(((d-f)/86400000+f.getDay()+1)/7); }
+function isoWeek(s) {
+  const d=new Date(s); if(isNaN(d)) return null;
+  d.setHours(0,0,0,0); d.setDate(d.getDate()+3-(d.getDay()+6)%7);
+  const w=new Date(d.getFullYear(),0,4);
+  return 1+Math.round(((d-w)/86400000-3+(w.getDay()+6)%7)/7);
+}
+function isoYear(s) { const d=new Date(s); return isNaN(d)?null:d.getFullYear(); }
+
+// ─── INIT ─────────────────────────────────────────────
+document.getElementById('fecha-hoy').textContent=today();
+document.getElementById('semana-actual').textContent='Semana '+semanaNum();
+document.getElementById('fecha-jornada').value=new Date().toISOString().split('T')[0];
+
+function showPage(id,btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='graficas') renderCharts();
+  if(id==='semanal')  renderSemanal();
+  if(id==='mensual')  renderMensual();
+  if(id==='trabajadores') { renderRanking(); renderHistorialJornadas(); actualizarRatiosAcumulados(); }
+}
+
+// ─── MODAL ────────────────────────────────────────────
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+function guardarObjetivo() {
+  objetivoSemanal=parseFloat(document.getElementById('obj-kg-input').value)||10000;
+  guardarEstado(); actualizarStickyBar();
+  cerrarModal('modal-objetivo');
+  mostrarToast('Objetivo: '+num(objetivoSemanal,0)+' kg');
+}
+
+// ─── OBJETIVO SEMANAL DINÁMICO ───────────────────────
+// (kg restantes del mes) ÷ (semanas que quedan hasta fin de mes)
+function calcObjetivoSemanal() {
+  const now=new Date();
+  const ultimoDiaMes=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const kgMes=jornadasMes(0).reduce((s,j)=>s+j.totKg,0);
+  const kgRestantes=Math.max(objetivoSemanal-kgMes,0);
+  const diasRestantes=ultimoDiaMes.getDate()-now.getDate()+1;
+  const semanasRestantes=Math.max(diasRestantes/7,1);
+  return Math.round(kgRestantes/semanasRestantes);
+}
+function textoObjetivoSemanal() {
+  const now=new Date();
+  const ultimoDiaMes=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const diasRestantes=ultimoDiaMes.getDate()-now.getDate()+1;
+  const kgMes=jornadasMes(0).reduce((s,j)=>s+j.totKg,0);
+  const kgRestantes=Math.max(objetivoSemanal-kgMes,0);
+  return num(kgRestantes,0)+' kg restantes · '+diasRestantes+' días hasta fin de mes';
+}
+
+// ─── STICKY BAR ──────────────────────────────────────
+function actualizarStickyBar() {
+  // Calcula directamente desde los workers de cada jornada para no depender
+  // de que totValor/totCoste estén ya calculados en el objeto guardado
+  const jorns=jornadasMes(0);
+  const kgMes    = jorns.reduce((s,j)=>s+j.totKg,0);
+  const valorMes = jorns.reduce((s,j)=>{
+    const pv=j.precioVenta||1;
+    return s+(j.totKg*pv);
+  },0);
+  const costeMes = jorns.reduce((s,j)=>{
+    const c=j.workers.reduce((sc,w)=>sc+w.kg*getTarifa(w.nombre,w.tarifa),0);
+    return s+c;
+  },0);
+  const margenMes=valorMes-costeMes;
+
+  document.getElementById('sb-kg').textContent=num(kgMes,1);
+  document.getElementById('sb-valor').textContent=eur(valorMes);
+  const mEl=document.getElementById('sb-margen');
+  mEl.textContent=eur(margenMes); mEl.className='sbar-val '+(margenMes>=0?'green':'red');
+  document.getElementById('sb-coste-mes').textContent=eur(costeMes);
+
+  const pctMes=objetivoSemanal>0?Math.min(kgMes/objetivoSemanal*100,100):0;
+  document.getElementById('sb-obj-pct').textContent=num(pctMes,0)+'%';
+  document.getElementById('sb-obj-fill').style.width=pctMes+'%';
+  document.getElementById('obj-kg-input').value=objetivoSemanal;
+}
+
+// ─── WORKERS DÍA ──────────────────────────────────────
+function syncWorkers() {
+  const n=parseInt(document.getElementById('num-workers').value)||4;
+  const hDef=parseFloat(document.getElementById('horas-defecto').value)||7;
+  while(workersDia.length<n){
+    const idx=workersDia.length;
+    const e=equipo[idx]||{nombre:'Trabajador '+(idx+1),tarifa:0.50};
+    workersDia.push({nombre:e.nombre,tarifa:e.tarifa,horas:hDef,kg:0,otrosCostes:0});
+  }
+  workersDia=workersDia.slice(0,n);
+  renderWorkers();
+}
+function addWorkerRow() {
+  const idx=workersDia.length;
+  const hDef=parseFloat(document.getElementById('horas-defecto').value)||7;
+  const e=equipo[idx]||{nombre:'Trabajador '+(idx+1),tarifa:0.50};
+  workersDia.push({nombre:e.nombre,tarifa:e.tarifa,horas:hDef,kg:0,otrosCostes:0});
+  document.getElementById('num-workers').value=workersDia.length;
+  renderWorkers();
+}
+function renderWorkers() {
+  document.getElementById('workers-table').innerHTML=workersDia.map((w,i)=>{
+    const color=workerColor(w.nombre);
+    const ini=w.nombre.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    return `<tr>
+      <td style="display:flex;align-items:center;gap:8px;border-bottom:0;">
+        <div class="worker-avatar" style="background:${color}">${ini}</div>
+        <input type="text" value="${w.nombre}" style="width:100px;text-align:left" onchange="workersDia[${i}].nombre=this.value;recalcDia()">
+      </td>
+      <td class="num"><input type="number" value="${w.horas}" min="0" max="24" step="0.5" style="width:60px;" oninput="workersDia[${i}].horas=parseFloat(this.value)||0;recalcDia()"> h</td>
+      <td class="num"><input type="number" value="${w.kg}" min="0" step="0.1" oninput="workersDia[${i}].kg=parseFloat(this.value)||0;recalcDia()"> kg</td>
+      <td class="num" id="row-bbruto-${i}">—</td>
+      <td class="num" id="row-coste-${i}">—</td>
+      <td class="num"><input type="number" value="${w.otrosCostes||0}" min="0" step="0.01" style="width:70px;" oninput="workersDia[${i}].otrosCostes=parseFloat(this.value)||0;recalcDia()"> €</td>
+      <td class="num" id="row-benef-${i}">—</td>
+      <td class="num" id="row-mpct-${i}">—</td>
+      <td><button class="danger" onclick="workersDia.splice(${i},1);document.getElementById('num-workers').value=workersDia.length;renderWorkers()">✕</button></td>
+    </tr>`;
+  }).join('');
+  recalcDia();
+}
+
+function recalcDia() {
+  const pv=getVal('precio-venta')||1;
+  const ca=getVal('coste-adicional-dia')||0;
+  workersDia.forEach((w,i)=>{
+    const tar=getTarifa(w.nombre,w.tarifa);
+    const bb=w.kg*pv, cm=w.kg*tar, ot=w.otrosCostes||0;
+    const bn=bb-cm-ot, mp=bb>0?(bn/bb*100):0;
+    const mc=mp>=40?'green':mp>=20?'amber':'red';
+    const s=(id,txt,cls)=>{const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.className='num '+(cls||'');};
+    s(`row-bbruto-${i}`,eur(bb),'green');
+    s(`row-coste-${i}`,eur(cm),'');
+    s(`row-benef-${i}`,eur(bn),bn>=0?'green':'red');
+    s(`row-mpct-${i}`,num(mp,1)+'%',mc);
+  });
+  const totKg=workersDia.reduce((s,w)=>s+w.kg,0);
+  const totHoras=workersDia.reduce((s,w)=>s+(w.horas||0),0);
+  const totBB=totKg*pv;
+  const totCoste=workersDia.reduce((s,w)=>s+w.kg*getTarifa(w.nombre,w.tarifa),0);
+  const totOtros=workersDia.reduce((s,w)=>s+(w.otrosCostes||0),0)+ca;
+  const totBN=totBB-totCoste-totOtros;
+  const mPct=totBB>0?(totBN/totBB*100):0;
+  const kph=totHoras>0?totKg/totHoras:0;
+
+  document.getElementById('tot-horas').textContent=num(totHoras,1)+' h';
+  document.getElementById('tot-kilos').textContent=num(totKg,1)+' kg';
+  document.getElementById('tot-bbruto').textContent=eur(totBB);
+  document.getElementById('tot-coste').textContent=eur(totCoste);
+  document.getElementById('tot-otros').textContent=eur(totOtros);
+  const bEl=document.getElementById('tot-benef'); bEl.textContent=eur(totBN); bEl.className='num '+(totBN>=0?'green':'red');
+  const mpEl=document.getElementById('tot-margen-pct'); mpEl.textContent=num(mPct,1)+'%'; mpEl.className='num '+(mPct>=40?'green':mPct>=20?'amber':'red');
+
+  document.getElementById('kpi-kilos-day').textContent=num(totKg,1);
+  document.getElementById('kpi-coste-day').textContent=eur(totCoste);
+  document.getElementById('kpi-ingreso-day').textContent=eur(totBB);
+  const mEl=document.getElementById('kpi-margen-day'); mEl.textContent=eur(totBB-totCoste); mEl.className='metric-value '+((totBB-totCoste)>=0?'green':'red');
+  document.getElementById('kpi-margen-pct').textContent=num(totBB>0?((totBB-totCoste)/totBB*100):0,1)+'%';
+  const bnEl=document.getElementById('kpi-benef-day'); bnEl.textContent=eur(totBN); bnEl.className='metric-value '+(totBN>=0?'green':'red');
+  const mnEl=document.getElementById('kpi-mneto-day'); mnEl.textContent=eur(totBN); mnEl.className='metric-value '+(mPct>=40?'green':mPct>=20?'amber':'red');
+  document.getElementById('kpi-mneto-pct').textContent=num(mPct,1)+'%';
+
+  const setMC=(id,cls)=>{const el=document.getElementById(id);if(el)el.className='metric '+cls;};
+  setMC('m-margen-day',(totBB-totCoste)>=0?'good':'bad');
+  setMC('m-benef-day',totBN>=0?'good':'bad');
+  setMC('m-mneto-day',mPct>=40?'good':mPct>=20?'warn':'bad');
+
+  renderRatios(totKg,totHoras,totCoste,totOtros,totBB,kph,mPct);
+  renderRentabilidad(totKg,totCoste,totOtros,totBB,totBN,mPct);
+  actualizarStickyBar();
+  scheduleAutoSave();
+  // Refrescar dashboard si está visible
+  if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+}
+
+function renderRatios(totKg,totHoras,totCoste,totOtros,totBB,kph,mPct) {
+  const ck=totKg>0?totCoste/totKg:0;
+  const ch=totHoras>0?(totCoste+totOtros)/totHoras:0;
+  const eph=totHoras>0?totCoste/totHoras:0;
+
+  // Tendencia kg/h: semana actual vs semana anterior
+  const jornsActual=jornadasSemana(0);
+  const jornsAnterior=jornadasSemana(-1);
+  const kphActual=jornsActual.length>0?jornsActual.reduce((s,j)=>s+(j.kph||0),0)/jornsActual.length:0;
+  const kphAnterior=jornsAnterior.length>0?jornsAnterior.reduce((s,j)=>s+(j.kph||0),0)/jornsAnterior.length:0;
+  const diffKph=kphActual-kphAnterior;
+  const tendKph=kphAnterior>0
+    ? (diffKph>=0.5?`<span style="color:var(--green2)">↑ +${num(diffKph,1)} vs sem. ant.</span>`
+      :diffKph<=-0.5?`<span style="color:var(--red)">↓ ${num(diffKph,1)} vs sem. ant.</span>`
+      :`<span style="color:var(--text3)">→ estable vs sem. ant.</span>`)
+    : `<span style="color:var(--text3)">— sin semana anterior</span>`;
+
+  // Kg/hora trabajadores hoy vs su media histórica
+  const compWorkers=workersDia.filter(w=>w.horas>0&&w.kg>0).map(w=>{
+    const kphW=w.kg/w.horas;
+    const historial=jornadas.filter(j=>j.workers.some(ww=>ww.nombre===w.nombre));
+    const kphHist=historial.length>0
+      ? historial.reduce((s,j)=>{const ww=j.workers.find(ww=>ww.nombre===w.nombre);return s+(ww&&ww.horas>0?ww.kg/ww.horas:0);},0)/historial.length
+      : 0;
+    const diff=kphHist>0?kphW-kphHist:0;
+    const arrow=kphHist===0?'':(diff>=0.5?`↑+${num(diff,1)}`:(diff<=-0.5?`↓${num(diff,1)}`:'→'));
+    const col=kphHist===0?'var(--text3)':(diff>=0.5?'var(--green2)':(diff<=-0.5?'var(--red)':'var(--text3))'));
+    return `<span style="font-size:10px;color:var(--text2);">${w.nombre.split(' ')[0]}: <strong style="color:${col}">${num(kphW,1)} <span style="font-size:9px;">${arrow}</span></strong></span>`;
+  }).join('<span style="color:var(--border2);margin:0 6px;">·</span>');
+
+  // Objetivo diario implícito
+  const now=new Date();
+  const ultimoDiaMes=new Date(now.getFullYear(),now.getMonth()+1,0);
+  const diasRestantes=Math.max(ultimoDiaMes.getDate()-now.getDate()+1,1);
+  const kgMes=jornadasMes(0).reduce((s,j)=>s+j.totKg,0);
+  const kgRestantes=Math.max(objetivoSemanal-kgMes,0);
+  const objDiario=Math.ceil(kgRestantes/diasRestantes);
+
+  const items=[
+    {label:'Kg/hora equipo',   val:num(kph,2),     unit:'kg/h',bar:Math.min(kph/20*100,100),      good:kph>=12},
+    {label:'€/hora m.o.',      val:num(eph,2),     unit:'€/h', bar:Math.min(eph/10*100,100),       good:eph<=5},
+    {label:'Coste m.o. por kg',val:num(ck,3),      unit:'€/kg',bar:Math.max(100-ck*100,0),         good:ck<=0.55},
+    {label:'Coste total/hora', val:num(ch,2),      unit:'€/h', bar:Math.min(ch/15*100,100),        good:ch<=8},
+    {label:'Horas totales',    val:num(totHoras,1),unit:'h',   bar:Math.min(totHoras/40*100,100),  good:true},
+    {label:'Margen neto %',    val:num(mPct,1),    unit:'%',   bar:Math.min(Math.max(mPct,0),100), good:mPct>=40},
+  ];
+
+  document.getElementById('ratios-panel').innerHTML=items.map(it=>`
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+        <span style="font-size:11px;color:var(--text2);font-family:var(--mono);">${it.label}</span>
+        <span style="font-size:14px;font-family:'Playfair Display',serif;color:${it.good?'var(--green2)':'var(--amber)'};">${it.val} <span style="font-size:11px;color:var(--text3);">${it.unit}</span></span>
+      </div>
+      <div class="kpi-bar-bg"><div class="kpi-bar-fill ${it.good?'':'warn'}" style="width:${it.bar}%"></div></div>
+    </div>`).join('')
+  // Tendencia kg/h semana
+  +`<div style="margin-bottom:14px;padding-top:10px;border-top:1px solid var(--border);">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:5px;letter-spacing:0.12em;">Tendencia kg/h vs semana anterior</div>
+      <div style="font-size:12px;">${tendKph}</div>
+    </div>`
+  // Kg/h trabajadores hoy vs media
+  +(compWorkers?`<div style="margin-bottom:14px;">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:6px;letter-spacing:0.12em;">Kg/h hoy vs media histórica</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;line-height:1.8;">${compWorkers}</div>
+    </div>`:'')
+  // Objetivo diario implícito
+  +`<div style="padding:10px 12px;background:${kgRestantes>0?'var(--amber-bg)':'var(--green-bg)'};border-radius:6px;border:1px solid ${kgRestantes>0?'#dcc870':'var(--green-lt)'};">
+      <div style="font-family:var(--mono);font-size:9px;color:${kgRestantes>0?'var(--amber)':'var(--green2)'};letter-spacing:0.12em;margin-bottom:4px;">Objetivo diario implícito</div>
+      <div style="font-family:'Playfair Display',serif;font-size:18px;color:${kgRestantes>0?'var(--amber)':'var(--green2)'};">${kgRestantes>0?num(objDiario,0)+' kg/día':'✓ Objetivo mensual alcanzado'}</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px;">${kgRestantes>0?num(kgRestantes,0)+' kg restantes en '+diasRestantes+' días':'Enhorabuena'}</div>
+    </div>`;
+}
+
+function renderRentabilidad(totKg,totCoste,totOtros,totBB,totBN,mPct) {
+  const roi=(totCoste+totOtros)>0?(totBN/(totCoste+totOtros)*100):0;
+  const ck=totKg>0?totCoste/totKg:0;
+  document.getElementById('rentabilidad-panel').innerHTML=`
+    <div class="result-line" style="margin-top:0;border-top:none;padding-top:0;"><span>Benef. bruto (kg × precio)</span><strong>${eur(totBB)}</strong></div>
+    <div class="result-line"><span>− Coste mano de obra</span><strong style="color:var(--red)">−${eur(totCoste)}</strong></div>
+    <div class="result-line"><span>− Otros costes</span><strong style="color:var(--red)">−${eur(totOtros)}</strong></div>
+    <div class="result-line" style="border-top:2px solid var(--border2);"><span>= Beneficio neto</span><strong style="color:${totBN>=0?'var(--green2)':'var(--red)'}">${eur(totBN)}</strong></div>
+    <div style="margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:4px;font-family:var(--mono);font-size:11px;color:var(--text2);line-height:2;">
+      ROI sobre costes: <strong style="color:var(--green2)">${num(roi,1)}%</strong><br>
+      Coste m.o. €/kg: <strong>${num(ck,3)} €</strong><br>
+      Margen neto: <strong style="color:${mPct>=40?'var(--green2)':'var(--amber)'}">${num(mPct,1)}%</strong>
+    </div>`;
+}
+
+// ─── CARGA / RESETEO DE DÍA ───────────────────────────
+function resetDia() {
+  const fecha=getStr('fecha-jornada');
+  const j=jornadas.find(j=>j.fecha===fecha);
+  const hDef=parseFloat(document.getElementById('horas-defecto').value)||7;
+  if(j) {
+    workersDia=JSON.parse(JSON.stringify(j.workers));
+    document.getElementById('precio-venta').value=j.precioVenta||1;
+    document.getElementById('coste-adicional-dia').value=j.costeAdicional||0;
+    document.getElementById('num-workers').value=workersDia.length;
+    renderWorkers();
+    document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge guardado">✓ Jornada guardada — editando</span>';
+    document.getElementById('btn-eliminar').style.display='inline-flex';
+    document.getElementById('tabla-dia-titulo').textContent='Producción por trabajador — '+fecha;
+    mostrarToast('Jornada del '+fecha+' cargada. Edita y vuelve a guardar.');
+  } else {
+    workersDia=workersDia.map(w=>({...w,kg:0,otrosCostes:0,horas:hDef}));
+    renderWorkers();
+    document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge nuevo">+ Jornada nueva</span>';
+    document.getElementById('btn-eliminar').style.display='none';
+    document.getElementById('tabla-dia-titulo').textContent='Producción por trabajador — nueva jornada';
+  }
+}
+
+function guardarJornada() {
+  const pv=getVal('precio-venta')||1;
+  const fecha=getStr('fecha-jornada')||new Date().toISOString().split('T')[0];
+  const ca=getVal('coste-adicional-dia')||0;
+  const totKg=workersDia.reduce((s,w)=>s+w.kg,0);
+  const totHoras=workersDia.reduce((s,w)=>s+(w.horas||0),0);
+  const totCoste=workersDia.reduce((s,w)=>s+w.kg*getTarifa(w.nombre,w.tarifa),0);
+  const totOtros=workersDia.reduce((s,w)=>s+(w.otrosCostes||0),0)+ca;
+  const totBB=totKg*pv;
+  const benefNeto=totBB-totCoste-totOtros;
+  if(totKg===0){mostrarToast('Introduce los kilos antes de guardar.','err');return;}
+  const idx=jornadas.findIndex(j=>j.fecha===fecha);
+  const data={fecha,costeAdicional:ca,workers:JSON.parse(JSON.stringify(workersDia)),
+    totKg,totHoras,totCoste,totOtros,totValor:totBB,benefNeto,margen:totBB-totCoste,
+    kph:totHoras>0?totKg/totHoras:0,precioVenta:pv};
+  if(idx>=0){jornadas[idx]=data;mostrarToast('Jornada del '+fecha+' actualizada · '+num(totKg,1)+' kg');}
+  else{jornadas.push(data);mostrarToast('Jornada del '+fecha+' guardada · '+num(totKg,1)+' kg');}
+  guardarEstado(); actualizarStickyBar();
+  document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge guardado">✓ Jornada guardada</span>';
+  document.getElementById('btn-eliminar').style.display='inline-flex';
+}
+
+function eliminarJornada() {
+  const fecha=getStr('fecha-jornada'); if(!fecha) return;
+  if(!confirm('¿Eliminar la jornada del '+fecha+'? Esta acción no se puede deshacer.')) return;
+  jornadas=jornadas.filter(j=>j.fecha!==fecha);
+  guardarEstado();
+  workersDia=workersDia.map(w=>({...w,kg:0,otrosCostes:0}));
+  renderWorkers();
+  document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge nuevo">Sin jornada registrada</span>';
+  document.getElementById('btn-eliminar').style.display='none';
+  document.getElementById('tabla-dia-titulo').textContent='Producción por trabajador — nueva jornada';
+  actualizarStickyBar();
+  renderDashboard();
+  mostrarToast('Jornada del '+fecha+' eliminada.');
+}
+
+// ─── EQUIPO ───────────────────────────────────────────
+function recalcularJornadasConEquipo() {
+  jornadas.forEach(j=>{
+    j.workers.forEach(w=>{const e=equipo.find(e=>e.nombre===w.nombre);if(e) w.tarifa=e.tarifa;});
+    const pv=j.precioVenta||1;
+    j.totCoste=j.workers.reduce((s,w)=>s+w.kg*w.tarifa,0);
+    j.totValor=j.totKg*pv; j.margen=j.totValor-j.totCoste;
+    j.benefNeto=j.totValor-j.totCoste-(j.totOtros||0);
+  });
+  guardarEstado();
+}
+function addWorkerEquipo() {
+  const nombre=getStr('new-worker-name');
+  const tarifa=document.getElementById('new-worker-tarifa').value===''?0.50:parseFloat(document.getElementById('new-worker-tarifa').value);
+  const nota=getStr('new-worker-nota');
+  if(!nombre){mostrarToast('Introduce un nombre.','err');return;}
+  const ex=equipo.find(e=>e.nombre===nombre);
+  if(ex){ex.tarifa=tarifa;ex.nota=nota;mostrarToast(nombre+' actualizado a '+num(tarifa,2)+' €/kg');}
+  else{equipo.push({nombre,tarifa,nota});mostrarToast(nombre+' añadido · '+num(tarifa,2)+' €/kg');}
+  recalcularJornadasConEquipo(); renderEquipoList();
+  workersDia.forEach(w=>{const e=equipo.find(e=>e.nombre===w.nombre);if(e) w.tarifa=e.tarifa;});
+  recalcDia();
+}
+function renderEquipoList() {
+  document.getElementById('equipo-list').innerHTML=equipo.map((e,i)=>{
+    const color=workerColor(e.nombre);
+    const ini=e.nombre.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div class="worker-avatar" style="background:${color};width:30px;height:30px;font-size:10px;">${ini}</div>
+      <div style="flex:1;"><div style="font-size:13px;">${e.nombre}</div>${e.nota?`<div class="worker-nota">${e.nota}</div>`:''}</div>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--text3);">${num(e.tarifa,2)} €/kg</span>
+      <button class="danger" onclick="equipo.splice(${i},1);recalcularJornadasConEquipo();renderEquipoList()">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── RATIOS ACUMULADOS ────────────────────────────────
+function actualizarRatiosAcumulados() {
+  if(!jornadas.length){
+    ['ratio-acum-productividad','ratio-acum-economia','ratio-acum-evol'].forEach(id=>{
+      document.getElementById(id).innerHTML='<p class="nota">Sin jornadas registradas aún.</p>';
+    }); return;
+  }
+  const totKg=jornadas.reduce((s,j)=>s+j.totKg,0);
+  const totHoras=jornadas.reduce((s,j)=>s+(j.totHoras||0),0);
+  const totCoste=jornadas.reduce((s,j)=>s+j.totCoste,0);
+  const totValor=jornadas.reduce((s,j)=>s+j.totValor,0);
+  const totOtros=jornadas.reduce((s,j)=>s+(j.totOtros||0),0);
+  const totBN=jornadas.reduce((s,j)=>s+(j.benefNeto||j.margen),0);
+  const kphG=totHoras>0?totKg/totHoras:0;
+  const ckG=totKg>0?totCoste/totKg:0;
+  const mPctG=totValor>0?((totValor-totCoste)/totValor*100):0;
+  const kgJ=jornadas.length>0?totKg/jornadas.length:0;
+  const roi=(totCoste+totOtros)>0?(totBN/(totCoste+totOtros)*100):0;
+
+  const ephG=totHoras>0?totCoste/totHoras:0;
+  const bar=(v,max,good)=>`<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-size:11px;color:var(--text2);font-family:var(--mono);">${v.l}</span><span style="font-size:16px;font-family:'Playfair Display',serif;color:${v.good?'var(--green2)':'var(--amber)'};">${v.v} <span style="font-size:10px;color:var(--text3);">${v.u}</span></span></div><div class="kpi-bar-bg"><div class="kpi-bar-fill ${v.good?'':'warn'}" style="width:${Math.min(v.bar,100)}%"></div></div></div>`;
+  document.getElementById('ratio-acum-productividad').innerHTML=[
+    {l:'Kg/hora medio',v:num(kphG,2),u:'kg/h',good:kphG>=12,bar:Math.min(kphG/20*100,100)},
+    {l:'€/hora m.o. (acum.)',v:num(ephG,2),u:'€/h',good:ephG<=5,bar:Math.min(ephG/10*100,100)},
+    {l:'Kg por jornada',v:num(kgJ,1),u:'kg',good:kgJ>=80,bar:Math.min(kgJ/200*100,100)},
+    {l:'Total kg recogidos',v:num(totKg,1),u:'kg',good:true,bar:Math.min(totKg/1000*100,100)},
+    {l:'Total horas',v:num(totHoras,1),u:'h',good:true,bar:Math.min(totHoras/200*100,100)},
+    {l:'Jornadas registradas',v:jornadas.length,u:'días',good:true,bar:Math.min(jornadas.length/30*100,100)},
+  ].map(it=>bar(it)).join('');
+
+  document.getElementById('ratio-acum-economia').innerHTML=[
+    {l:'Valor total producido',v:eur(totValor),good:true},
+    {l:'Coste total m.o.',v:eur(totCoste),good:true},
+    {l:'€/hora m.o. acumulado',v:num(ephG,2)+' €',good:ephG<=5},
+    {l:'Beneficio neto total',v:eur(totBN),good:totBN>=0},
+    {l:'Margen bruto medio',v:num(mPctG,1)+'%',good:mPctG>=40},
+    {l:'Coste/kg acumulado',v:num(ckG,3)+' €',good:ckG<=0.55},
+    {l:'ROI sobre costes',v:num(roi,1)+'%',good:roi>=60},
+  ].map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--text2);font-family:var(--mono);">${it.l}</span><span style="font-size:15px;font-family:'Playfair Display',serif;color:${it.good?'var(--green2)':'var(--red)'};">${it.v}</span></div>`).join('');
+
+  const mid=Math.ceil(jornadas.length/2);
+  const m1=medias(jornadas.slice(0,mid)), m2=medias(jornadas.slice(mid));
+  const n1=Math.ceil(jornadas.length/2), n2=jornadas.length-n1;
+  function medias(grp){if(!grp.length)return{kph:0,mp:0,ck:0};const kg=grp.reduce((s,j)=>s+j.totKg,0),h=grp.reduce((s,j)=>s+(j.totHoras||0),0),v=grp.reduce((s,j)=>s+j.totValor,0),c=grp.reduce((s,j)=>s+j.totCoste,0);return{kph:h>0?kg/h:0,mp:v>0?((v-c)/v*100):0,ck:kg>0?c/kg:0};}
+  function evBadge(v1,v2,hb=true){const d=v2-v1,b=hb?d>0.01:d<-0.001,w=hb?d<-0.01:d>0.001;if(b)return`<span class="trend-up">↑ mejorando</span>`;if(w)return`<span class="trend-down">↓ empeorando</span>`;return`<span class="trend-flat">→ estable</span>`;}
+  document.getElementById('ratio-acum-evol').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:12px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--text3);"><div>Ratio</div><div>1ª mitad (${n1} j.)</div><div>2ª mitad (${n2} j.)</div></div>
+    ${[{l:'Kg/hora',p:num(m1.kph,2)+' kg/h',s:num(m2.kph,2)+' kg/h',badge:evBadge(m1.kph,m2.kph,true)},{l:'Margen %',p:num(m1.mp,1)+'%',s:num(m2.mp,1)+'%',badge:evBadge(m1.mp,m2.mp,true)},{l:'Coste/kg',p:num(m1.ck,3)+' €',s:num(m2.ck,3)+' €',badge:evBadge(m1.ck,m2.ck,false)}].map(it=>`<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:6px;">${it.l}</div><div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;"><span style="font-size:13px;font-family:'Playfair Display',serif;color:var(--text2);">${it.p}</span><span style="font-size:15px;font-family:'Playfair Display',serif;">${it.s}</span>${it.badge}</div></div>`).join('')}
+    <p class="nota" style="margin-top:10px;">Compara las primeras ${n1} jornadas con las últimas ${n2}.</p>`;
+}
+
+// ─── TOGGLE ANÁLISIS DASHBOARD ───────────────────────
+function toggleAnalisis(tipo) {
+  const content = document.getElementById(tipo+'-analisis-content');
+  const icon    = document.getElementById(tipo+'-toggle-icon');
+  const visible = content.style.display !== 'none';
+  content.style.display = visible ? 'none' : 'block';
+  icon.style.transform  = visible ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// ─── DASHBOARD ───────────────────────────────────────
+function renderDashboard() {
+  // — DÍA —
+  const fechaDia=document.getElementById('fecha-jornada').value;
+  const labelDia=fechaDia?fechaDia:'hoy';
+  const elLabel=document.getElementById('dash-fecha-label');
+  if(elLabel) elLabel.textContent=labelDia;
+
+  // Botones de acción según si la jornada existe
+  const jornadaExiste = jornadas.find(j=>j.fecha===fechaDia);
+  const actionsEl = document.getElementById('dash-dia-actions');
+  if(actionsEl) {
+    if(jornadaExiste) {
+      actionsEl.innerHTML=`
+        <button onclick="irAJornada('${fechaDia}')" style="font-size:9px;padding:4px 12px;letter-spacing:0.1em;">✎ Editar</button>
+        <button onclick="eliminarJornadaDirecta('${fechaDia}')" style="font-size:9px;padding:4px 12px;color:var(--red);background:var(--red-bg);border:1px solid #dca090;border-radius:4px;cursor:pointer;box-shadow:none;letter-spacing:0.1em;text-transform:uppercase;font-family:'Outfit',sans-serif;">✕ Eliminar jornada</button>`;
+    } else {
+      actionsEl.innerHTML=`<span style="font-family:var(--mono);font-size:9px;color:var(--text3);">Sin jornada guardada</span>`;
+    }
+  }
+
+  const totKg=workersDia.reduce((s,w)=>s+w.kg,0);
+  const pv=getVal('precio-venta')||1;
+  const ca=getVal('coste-adicional-dia')||0;
+  const totBB=totKg*pv;
+  const totCoste=workersDia.reduce((s,w)=>s+w.kg*getTarifa(w.nombre,w.tarifa),0);
+  const totOtros=workersDia.reduce((s,w)=>s+(w.otrosCostes||0),0)+ca;
+  const totBN=totBB-totCoste-totOtros;
+  const mPct=totBB>0?(totBN/totBB*100):0;
+
+  const set=(id,val,cls)=>{const el=document.getElementById(id);if(!el)return;el.textContent=val;if(cls)el.className='metric-value '+cls;};
+  set('d-kpi-kilos',num(totKg,1));
+  set('d-kpi-coste',eur(totCoste));
+  set('d-kpi-valor',eur(totBB));
+  set('d-kpi-margen',eur(totBB-totCoste),(totBB-totCoste)>=0?'green':'red');
+  document.getElementById('d-kpi-margen-pct').textContent=num(totBB>0?((totBB-totCoste)/totBB*100):0,1)+'%';
+  set('d-kpi-benef',eur(totBN),totBN>=0?'green':'red');
+  set('d-kpi-mneto',eur(totBN),mPct>=40?'green':mPct>=20?'amber':'red');
+  document.getElementById('d-kpi-mneto-pct').textContent=num(mPct,1)+'%';
+
+  const setMD=(id,cls)=>{const el=document.getElementById(id);if(el)el.className='metric '+cls;};
+  setMD('d-m-margen',(totBB-totCoste)>=0?'good':'bad');
+  setMD('d-m-benef',totBN>=0?'good':'bad');
+  setMD('d-m-mneto',mPct>=40?'good':mPct>=20?'warn':'bad');
+
+  // Objetivo diario implícito en dashboard
+  const nowD=new Date();
+  const ultimoDiaMesD=new Date(nowD.getFullYear(),nowD.getMonth()+1,0);
+  const diasRestD=Math.max(ultimoDiaMesD.getDate()-nowD.getDate()+1,1);
+  const kgMesD=jornadasMes(0).reduce((s,j)=>s+j.totKg,0);
+  const kgRestD=Math.max(objetivoSemanal-kgMesD,0);
+  const objDiarioD=kgRestD>0?Math.ceil(kgRestD/diasRestD):0;
+  const elObjDiario=document.getElementById('dash-obj-diario');
+  if(elObjDiario){
+    elObjDiario.innerHTML=kgRestD>0
+      ?`<span style="font-family:'Playfair Display',serif;font-size:22px;color:var(--amber);">${num(objDiarioD,0)} kg</span> <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">necesarios hoy · ${num(kgRestD,0)} kg restantes en ${diasRestD} días</span>`
+      :`<span style="font-family:'Playfair Display',serif;font-size:18px;color:var(--green2);">✓ Objetivo mensual alcanzado</span>`;
+  }
+
+  // Tendencia kg/h semana vs anterior en dashboard
+  const jornsActD=jornadasSemana(0);
+  const jornsAntD=jornadasSemana(-1);
+  const kphActD=jornsActD.length>0?jornsActD.reduce((s,j)=>s+(j.kph||0),0)/jornsActD.length:0;
+  const kphAntD=jornsAntD.length>0?jornsAntD.reduce((s,j)=>s+(j.kph||0),0)/jornsAntD.length:0;
+  const diffD=kphActD-kphAntD;
+  const elTend=document.getElementById('dash-tend-kph');
+  if(elTend&&kphAntD>0){
+    const col=diffD>=0.5?'var(--green2)':diffD<=-0.5?'var(--red)':'var(--text3)';
+    const arrow=diffD>=0.5?'↑':diffD<=-0.5?'↓':'→';
+    elTend.innerHTML=`<span style="color:${col};font-size:13px;">${arrow} ${diffD>=0?'+':''}${num(diffD,1)} kg/h</span> <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">vs semana anterior (${num(kphAntD,1)} kg/h)</span>`;
+  } else if(elTend){
+    elTend.innerHTML=`<span style="font-family:var(--mono);font-size:10px;color:var(--text3);">Sin semana anterior para comparar</span>`;
+  }
+
+  // — SEMANA —
+  const jorns=jornadasSemana(semanaOffset);
+  const semKg=jorns.reduce((s,j)=>s+j.totKg,0);
+  const semValor=jorns.reduce((s,j)=>s+j.totValor,0);
+  const semCoste=jorns.reduce((s,j)=>s+j.totCoste,0);
+  const semMargen=semValor-semCoste;
+  const semMPct=semValor>0?(semMargen/semValor*100):0;
+  const semKph=jorns.length>0?jorns.reduce((s,j)=>s+j.kph,0)/jorns.length:0;
+  const objSem=calcObjetivoSemanal();
+  const pctSem=objSem>0?Math.min(semKg/objSem*100,100):0;
+
+  const semLabel=document.getElementById('dash-sem-label');
+  if(semLabel) semLabel.textContent=semanaLabel(0);
+
+  set('dash-sem-kilos',num(semKg,1));set('dash-sem-valor',eur(semValor));
+  set('dash-sem-coste',eur(semCoste));
+  set('dash-sem-margen',eur(semMargen),semMPct>=40?'green':semMPct>=20?'amber':'red');
+  document.getElementById('dash-sem-margen-pct').textContent='margen '+num(semMPct,1)+'%';
+
+  document.getElementById('dash-sem-obj-display').innerHTML=num(semKg,1)+' <span>/ '+num(objSem,0)+' kg</span>';
+  document.getElementById('dash-sem-obj-sub').textContent=textoObjetivoSemanal();
+  document.getElementById('dash-sem-obj-fill').style.width=pctSem+'%';
+  document.getElementById('dash-sem-obj-fill').className='obj-bar-fill'+(pctSem<50?' warn':'');
+  document.getElementById('dash-sem-obj-pct').textContent=num(pctSem,0)+'%';
+  const semEstado=document.getElementById('dash-sem-obj-estado');
+  semEstado.textContent=pctSem>=100?'✓ Objetivo cumplido':pctSem>=75?'Muy cerca':'En progreso';
+  semEstado.style.color=pctSem>=100?'var(--green2)':pctSem>=75?'var(--amber)':'var(--text2)';
+
+  renderInsights(semKg,semValor,semCoste,semMargen,semMPct,semKph,jorns,objSem,'dash-insights-panel');
+  renderMejoras(semMPct,semKph,semKg,jorns,objSem,'dash-mejoras-panel');
+
+  // — MES —
+  const jornsM=jornadasMes(0);
+  const mesKg=jornsM.reduce((s,j)=>s+j.totKg,0);
+  const mesValor=jornsM.reduce((s,j)=>s+j.totValor,0);
+  const mesCoste=jornsM.reduce((s,j)=>s+j.totCoste,0);
+  const mesMargen=mesValor-mesCoste;
+  const mesMPct=mesValor>0?(mesMargen/mesValor*100):0;
+  const mesKph=jornsM.length>0?jornsM.reduce((s,j)=>s+(j.kph||0),0)/jornsM.length:0;
+  const pctMes=objetivoSemanal>0?Math.min(mesKg/objetivoSemanal*100,100):0;
+
+  const mesLabelEl=document.getElementById('dash-mes-label');
+  if(mesLabelEl) mesLabelEl.textContent=mesLabel(0);
+
+  set('dash-mes-kilos',num(mesKg,1));set('dash-mes-valor',eur(mesValor));
+  set('dash-mes-coste',eur(mesCoste));
+  set('dash-mes-margen',eur(mesMargen),mesMPct>=40?'green':mesMPct>=20?'amber':'red');
+  document.getElementById('dash-mes-margen-pct').textContent='margen '+num(mesMPct,1)+'%';
+
+  document.getElementById('dash-mes-obj-display').innerHTML=num(mesKg,1)+' <span>/ '+num(objetivoSemanal,0)+' kg</span>';
+  document.getElementById('dash-mes-obj-fill').style.width=pctMes+'%';
+  document.getElementById('dash-mes-obj-fill').className='obj-bar-fill'+(pctMes<50?' warn':'');
+  document.getElementById('dash-mes-obj-pct').textContent=num(pctMes,0)+'%';
+  const mesEstado=document.getElementById('dash-mes-obj-estado');
+  mesEstado.textContent=pctMes>=100?'✓ Objetivo cumplido':pctMes>=75?'Muy cerca':'En progreso';
+  mesEstado.style.color=pctMes>=100?'var(--green2)':pctMes>=75?'var(--amber)':'var(--text2)';
+
+  renderInsightsMes(mesKg,mesValor,mesCoste,mesMargen,mesMPct,mesKph,jornsM,'dash-mes-insights-panel');
+  renderMejorasMes(mesMPct,mesKph,mesKg,jornsM,'dash-mes-mejoras-panel');
+}
+
+// ─── TENDENCIA Y RANKING ──────────────────────────────
+function tendenciaWorker(nombre) {
+  const js=jornadas.filter(j=>j.workers.some(w=>w.nombre===nombre));
+  if(js.length<2) return '<span class="trend-flat">—</span>';
+  const mid=Math.floor(js.length/2);
+  const kph=grp=>grp.reduce((s,j)=>{const w=j.workers.find(w=>w.nombre===nombre);return s+(w&&w.horas>0?w.kg/w.horas:0);},0)/grp.length;
+  const diff=kph(js.slice(mid))-kph(js.slice(0,mid));
+  if(diff>0.3) return `<span class="trend-up">↑ +${num(diff,1)}</span>`;
+  if(diff<-0.3) return `<span class="trend-down">↓ ${num(diff,1)}</span>`;
+  return `<span class="trend-flat">→ estable</span>`;
+}
+
+function renderRanking() {
+  const stats={};
+  jornadas.forEach(j=>j.workers.forEach(w=>{
+    const key=w.nombre.trim().toLowerCase();
+    if(!stats[key]) stats[key]={nombre:w.nombre.trim(),jornadas:0,kg:0,horas:0,coste:0};
+    stats[key].jornadas++; stats[key].kg+=w.kg; stats[key].horas+=(w.horas||0);
+    stats[key].coste+=w.kg*getTarifa(w.nombre,w.tarifa);
+  }));
+  const lista=Object.values(stats).filter(w=>w.kg>0||w.horas>0).sort((a,b)=>(b.horas>0?b.kg/b.horas:0)-(a.horas>0?a.kg/a.horas:0));
+  if(!lista.length){document.getElementById('ranking-body').innerHTML=`<tr><td colspan="10" style="color:var(--text3);font-style:italic;padding:20px;">Sin jornadas guardadas aún.</td></tr>`;return;}
+  document.getElementById('ranking-body').innerHTML=lista.map((w,i)=>{
+    const kph=w.horas>0?w.kg/w.horas:0, ck=w.kg>0?w.coste/w.kg:0;
+    const eph=w.horas>0?w.coste/w.horas:0;
+    const val=kph>=15?'badge-green':kph>=10?'badge-amber':'badge-red';
+    const stars=kph>=15?'★★★':kph>=10?'★★☆':'★☆☆';
+    const color=workerColor(w.nombre), ini=w.nombre.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    return `<tr>
+      <td style="font-family:var(--mono);color:var(--text3);">${i+1}</td>
+      <td><div style="display:flex;align-items:center;gap:8px;"><div class="worker-avatar" style="background:${color}">${ini}</div><span>${w.nombre}</span></div></td>
+      <td class="num">${w.jornadas}</td><td class="num green">${num(w.kg,1)} kg</td>
+      <td class="num">${num(w.horas,1)} h</td>
+      <td class="num ${kph>=12?'green':kph>=8?'amber':'red'}">${num(kph,2)} kg/h</td>
+      <td class="num ${eph<=5?'green':eph<=8?'amber':'red'}">${num(eph,2)} €/h</td>
+      <td style="text-align:right">${tendenciaWorker(w.nombre)}</td>
+      <td class="num">${eur(w.coste)}</td>
+      <td class="num ${ck<=0.52?'green':'amber'}">${num(ck,3)} €</td>
+      <td style="text-align:right"><span class="badge ${val}">${stars}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── HISTORIAL ────────────────────────────────────────
+function buildSemanasFiltro() {
+  const sel=document.getElementById('filtro-semana-historial');
+  const prev=sel.value;
+  const semanas=new Set();
+  jornadas.forEach(j=>{const w=isoWeek(j.fecha),y=isoYear(j.fecha);if(w&&y) semanas.add(`${y}-W${String(w).padStart(2,'0')}`);});
+  sel.innerHTML='<option value="todas">Todas las jornadas</option>'+[...semanas].sort().reverse().map(s=>`<option value="${s}" ${s===prev?'selected':''}>${s.replace('-W',' · Semana ')}</option>`).join('');
+}
+function renderHistorialJornadas() {
+  buildSemanasFiltro();
+  const filtro=document.getElementById('filtro-semana-historial').value;
+  const lista=filtro==='todas'?[...jornadas].reverse()
+    :[...jornadas].reverse().filter(j=>{const w=isoWeek(j.fecha),y=isoYear(j.fecha);return `${y}-W${String(w).padStart(2,'0')}`===filtro;});
+  if(!lista.length){document.getElementById('historial-jornadas').innerHTML=`<tr><td colspan="7" style="color:var(--text3);font-style:italic;padding:20px;">Sin jornadas guardadas.</td></tr>`;return;}
+  document.getElementById('historial-jornadas').innerHTML=lista.map(j=>`
+    <tr>
+      <td class="muted" style="font-family:var(--mono);font-size:11px;">${j.fecha}</td>
+      <td class="num">${j.workers.length}</td>
+      <td class="num green">${num(j.totKg,1)} kg</td>
+      <td class="num">${eur(j.totCoste)}</td>
+      <td class="num ${j.margen>=0?'green':'red'}">${eur(j.margen)}</td>
+      <td class="num">${num(j.kph,1)} kg/h</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button onclick="irAJornada('${j.fecha}')" style="font-size:9px;padding:4px 10px;">✎ Editar</button>
+        <button onclick="eliminarJornadaDirecta('${j.fecha}')" style="font-size:9px;padding:4px 8px;color:var(--red);background:var(--red-bg);border:1px solid #dca090;border-radius:4px;cursor:pointer;box-shadow:none;margin-left:4px;">✕ Borrar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function eliminarJornadaDirecta(fecha) {
+  if (!confirm('¿Eliminar la jornada del ' + fecha + '? Esta acción no se puede deshacer.')) return;
+  jornadas = jornadas.filter(j => j.fecha !== fecha);
+  guardarEstado();
+  actualizarStickyBar();
+  renderDashboard();
+  renderRanking();
+  renderHistorialJornadas();
+  renderSemanal();
+  renderMensual();
+  mostrarToast('Jornada del ' + fecha + ' eliminada.');
+}
+
+function irAJornada(fecha) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-diario').classList.add('active');
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  document.getElementById('fecha-jornada').value=fecha;
+  resetDia();
+}
+
+// ─── HELPERS SEMANA / MES ─────────────────────────────
+function jornadasSemana(offset) {
+  const now=new Date(), day=now.getDay()===0?7:now.getDay();
+  const monday=new Date(now); monday.setDate(now.getDate()-day+1+offset*7); monday.setHours(0,0,0,0);
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6); sunday.setHours(23,59,59,999);
+  return jornadas.filter(j=>{const d=new Date(j.fecha);return d>=monday&&d<=sunday;});
+}
+function semanaLabel(offset) {
+  const now=new Date(), day=now.getDay()===0?7:now.getDay();
+  const monday=new Date(now); monday.setDate(now.getDate()-day+1+offset*7);
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const fmt=d=>d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});
+  return fmt(monday)+' – '+fmt(sunday);
+}
+function jornadasMes(offset) {
+  const now=new Date(), year=now.getFullYear(), month=now.getMonth()+offset;
+  const inicio=new Date(year,month,1), fin=new Date(year,month+1,0);
+  const pad=n=>String(n).padStart(2,'0');
+  const strI=`${inicio.getFullYear()}-${pad(inicio.getMonth()+1)}-${pad(inicio.getDate())}`;
+  const strF=`${fin.getFullYear()}-${pad(fin.getMonth()+1)}-${pad(fin.getDate())}`;
+  return jornadas.filter(j=>j.fecha>=strI&&j.fecha<=strF);
+}
+function mesLabel(offset) {
+  const now=new Date();
+  return new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+}
+
+// ─── GRÁFICAS ─────────────────────────────────────────
+function renderCharts() {
+  const IDS=['chart-evol-kg-margen','chart-margen-pct','chart-evol-worker-kph','chart-triple-acum','chart-kph-evol'];
+  if(!jornadas.length){IDS.forEach(id=>destroyChart(id));return;}
+  const sorted=[...jornadas].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const labels=sorted.map(j=>j.fecha);
+  const C={g:'#3d7a35',a:'#8a6820',r:'#8a3020',lt:'#d0e8cc',b:'#2563a8',lb:'#c5daf5'};
+  const dualOpts=(y1,y2)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{font:{family:'JetBrains Mono',size:10},color:'#5a5a48',boxWidth:12}}},scales:{y:{beginAtZero:false,grid:{color:'#e4e0d2'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80'},title:{display:!!y1,text:y1||'',font:{size:9},color:'#9a9a80'}},y1:{display:!!y2,beginAtZero:false,position:'right',grid:{drawOnChartArea:false},ticks:{font:{family:'JetBrains Mono',size:10},color:'#2563a8'}},x:{grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80',maxRotation:45}}}});
+  const sOpts=()=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,grid:{color:'#e4e0d2'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80'}},x:{grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80',maxRotation:45}}}});
+
+  destroyChart('chart-evol-kg-margen');
+  charts['chart-evol-kg-margen']=new Chart(document.getElementById('chart-evol-kg-margen'),{type:'line',data:{labels,datasets:[
+    {label:'Kg recogidos',data:sorted.map(j=>j.totKg),borderColor:C.g,backgroundColor:C.lt+'44',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:C.g,borderWidth:2,yAxisID:'y'},
+    {label:'Margen (€)',data:sorted.map(j=>j.margen),borderColor:C.b,backgroundColor:C.lb+'33',fill:false,tension:0.35,pointRadius:4,pointBackgroundColor:C.b,borderWidth:2,borderDash:[5,3],yAxisID:'y1'}
+  ]},options:dualOpts('kg','€')});
+
+  destroyChart('chart-margen-pct');
+  const mPcts=sorted.map(j=>j.totValor>0?(j.margen/j.totValor*100):0);
+  charts['chart-margen-pct']=new Chart(document.getElementById('chart-margen-pct'),{type:'line',data:{labels,datasets:[
+    {label:'Margen %',data:mPcts,borderColor:C.g,backgroundColor:C.lt+'55',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:mPcts.map(v=>v>=40?C.g:v>=20?C.a:C.r),borderWidth:2}
+  ]},options:sOpts()});
+
+  const wNames=[...new Set(jornadas.flatMap(j=>j.workers.map(w=>w.nombre)))];
+  const wC=['#345c2c','#2563a8','#8a3020','#6a4a1c','#1a5050','#6a2a6a','#3a4a2c','#1a3060'];
+  destroyChart('chart-evol-worker-kph');
+  charts['chart-evol-worker-kph']=new Chart(document.getElementById('chart-evol-worker-kph'),{type:'line',data:{labels,datasets:wNames.map((nombre,idx)=>{
+    let ac=0;
+    const data=labels.map(fecha=>{const j=sorted.find(j=>j.fecha===fecha);if(!j)return null;const w=j.workers.find(w=>w.nombre===nombre);if(w)ac+=w.kg;return w?ac:null;});
+    return{label:nombre,data,borderColor:wC[idx%wC.length],backgroundColor:'transparent',fill:false,tension:0.35,pointRadius:4,pointBackgroundColor:wC[idx%wC.length],borderWidth:2.5,spanGaps:true};
+  })},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{font:{family:'JetBrains Mono',size:10},color:'#5a5a48',boxWidth:14,padding:14}},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+parseFloat(ctx.parsed.y).toFixed(1)+' kg'}}},scales:{y:{beginAtZero:true,grid:{color:'#e4e0d2'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80'},title:{display:true,text:'kg acumulados',font:{size:9},color:'#9a9a80'}},x:{grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80',maxRotation:45}}}}});
+
+  destroyChart('chart-triple-acum');
+  let aF=0,aC=0,aBN=0; const fA=[],cA=[],bA=[];
+  sorted.forEach(j=>{aF+=j.totValor||0;aC+=j.totCoste||0;aBN+=(j.benefNeto!=null?j.benefNeto:j.margen||0);fA.push(aF);cA.push(aC);bA.push(aBN);});
+  charts['chart-triple-acum']=new Chart(document.getElementById('chart-triple-acum'),{type:'line',data:{labels,datasets:[
+    {label:'Facturación acumulada (€)',data:fA,borderColor:'#2563a8',backgroundColor:'#2563a811',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:'#2563a8',borderWidth:2.5},
+    {label:'Coste acumulado (€)',data:cA,borderColor:'#8a3020',backgroundColor:'#8a302011',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:'#8a3020',borderWidth:2,borderDash:[4,3]},
+    {label:'Beneficio neto acumulado (€)',data:bA,borderColor:'#3d7a35',backgroundColor:'#d0e8cc55',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:bA.map(v=>v>=0?'#3d7a35':'#8a3020'),borderWidth:2.5}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{font:{family:'JetBrains Mono',size:10},color:'#5a5a48',boxWidth:14,padding:16}},tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}}},scales:{y:{beginAtZero:true,grid:{color:'#e4e0d2'},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80',callback:v=>v.toLocaleString('es-ES',{maximumFractionDigits:0})+' €'},title:{display:true,text:'€ acumulados',font:{size:9},color:'#9a9a80'}},x:{grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:10},color:'#9a9a80',maxRotation:45}}}}});
+
+  destroyChart('chart-kph-evol');
+  charts['chart-kph-evol']=new Chart(document.getElementById('chart-kph-evol'),{type:'line',data:{labels,datasets:[
+    {label:'Kg/hora equipo',data:sorted.map(j=>j.kph||0),borderColor:C.g,backgroundColor:C.lt+'44',fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:sorted.map(j=>(j.kph||0)>=12?C.g:(j.kph||0)>=8?C.a:C.r),borderWidth:2}
+  ]},options:sOpts()});
+}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ─── RESUMEN SEMANAL ──────────────────────────────────
+function renderSemanal() {
+  const jorns=jornadasSemana(semanaOffset);
+
+  document.getElementById('week-nav-label').textContent=semanaOffset===0?'Semana actual · '+semanaLabel(0):semanaLabel(semanaOffset);
+  document.getElementById('btn-sem-next').disabled=semanaOffset>=0;
+
+  document.getElementById('semana-tabla').innerHTML=jorns.length===0
+    ?`<tr><td colspan="9" style="color:var(--text3);font-style:italic;padding:16px;">Sin jornadas registradas esta semana.</td></tr>`
+    :jorns.map(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;return`<tr>
+      <td class="muted" style="font-family:var(--mono);font-size:11px;">${j.fecha}</td>
+      <td class="num">${j.workers.length}</td><td class="num green">${num(j.totKg,1)} kg</td>
+      <td class="num">${num(j.kph||0,2)} kg/h</td><td class="num">${eur(j.totCoste)}</td>
+      <td class="num">${eur(j.totValor)}</td>
+      <td class="num ${j.margen>=0?'green':'red'}">${eur(j.margen)}</td>
+      <td class="num ${mp>=40?'green':mp>=25?'amber':'red'}">${num(mp,1)}%</td>
+      <td style="text-align:right"><button onclick="irAJornada('${j.fecha}')" style="font-size:9px;padding:4px 10px;">✎ Editar</button></td>
+    </tr>`;}).join('');
+}
+
+function renderInsights(kg,valor,coste,margen,mPct,kph,jorns,obj,panelId='insights-panel') {
+  const ins=[];
+  if(!jorns.length){ins.push({t:'Sin datos',txt:'Guarda al menos una jornada para ver el análisis automático.'});}
+  else {
+    ins.push({t:'Producción semanal',txt:`Se han recogido ${num(kg,1)} kg en ${jorns.length} jornada(s), generando ${eur(valor)} de valor.`});
+    if(mPct>=40) ins.push({t:'Margen saludable',txt:`El margen bruto del ${num(mPct,1)}% indica una operación rentable.`});
+    else if(mPct>=20) ins.push({t:'Margen ajustado',txt:`El margen del ${num(mPct,1)}% es positivo pero mejorable.`});
+    else ins.push({t:'Margen bajo',txt:`Un margen del ${num(mPct,1)}% indica que el coste está muy cerca del precio de venta. Revisar urgente.`});
+    ins.push({t:'Rendimiento del equipo',txt:`La media de ${num(kph,2)} kg/h es ${kph>=12?'buena.':kph>=8?'aceptable, pero hay margen de mejora.':'inferior a lo deseable.'}`});
+    const pctObj=obj>0?(kg/obj*100):0;
+    ins.push({t:'Progreso objetivo semanal',txt:`Llevas ${num(kg,1)} kg de los ${num(obj,0)} kg del objetivo semanal (${num(pctObj,1)}%). ${pctObj>=100?'✓ Objetivo cumplido.':pctObj>=75?'Muy cerca, buen ritmo.':'Aún queda margen para esta semana.'}`});
+  }
+  const el=document.getElementById(panelId);
+  if(el) el.innerHTML=ins.map(i=>`<div class="insight-card"><div class="insight-title">${i.t}</div><div class="insight-text">${i.txt}</div></div>`).join('');
+}
+
+function renderMejoras(mPct,kph,kg,jorns,obj,panelId='mejoras-panel') {
+  const mej=[];
+  if(!jorns.length){mej.push({t:'Primeros pasos',txt:'Registra tu primera jornada para obtener recomendaciones.'});}
+  else {
+    if(kph<12) mej.push({t:'Mejorar kg/hora',txt:'Establece un mínimo de kg/h por trabajador. Los que no lleguen pueden necesitar rotación o ajuste de técnica.'});
+    if(mPct<40) mej.push({t:'Optimizar coste',txt:'Con precio de 1 €/kg, el coste no debería superar 0,55 €/kg para mantener margen >45%.'});
+    if(jorns.length>=3){const ks=jorns.map(j=>j.kph),mx=Math.max(...ks),mn=Math.min(...ks);if(mx-mn>3) mej.push({t:'Variabilidad entre jornadas',txt:`Diferencia de ${num(mx,1)} a ${num(mn,1)} kg/h. Identifica qué factores marcan la diferencia.`});}
+    if(kg>0&&jorns.length>0){const kpj=kg/jorns.length,r=Math.ceil(Math.max(obj-kg,0)/kpj);mej.push({t:'Proyección objetivo semanal',txt:r<=0?`Ya has alcanzado el objetivo semanal de ${num(obj,0)} kg. ✓`:`Llevas ${num(kg,1)} kg de ${num(obj,0)} kg. A tu ritmo de ${num(kpj,1)} kg/jornada, te faltan ~${r} jornada(s) para alcanzar el objetivo.`});}
+    mej.push({t:'Módulo de transformación',txt:'El salto de precio verde a producto transformado es donde se crea el mayor valor.'});
+  }
+  const el=document.getElementById(panelId);
+  if(el) el.innerHTML=mej.map(m=>`<div class="mejora-card"><div class="mejora-title">${m.t}</div><div class="mejora-text">${m.txt}</div></div>`).join('');
+}
+
+function renderInsightsMes(mesKg,mesValor,mesCoste,mesMargen,mesMPct,mesKph,jorns,panelId) {
+  const ins=[];
+  if(!jorns.length){ins.push({t:'Sin datos',txt:'No hay jornadas registradas este mes.'});}
+  else {
+    ins.push({t:'Producción del mes',txt:`Se han recogido ${num(mesKg,1)} kg en ${jorns.length} jornada(s), generando ${eur(mesValor)} de valor.`});
+    if(mesMPct>=40) ins.push({t:'Margen saludable',txt:`El margen bruto del ${num(mesMPct,1)}% indica una operación rentable este mes.`});
+    else if(mesMPct>=20) ins.push({t:'Margen ajustado',txt:`El margen del ${num(mesMPct,1)}% es positivo pero mejorable.`});
+    else ins.push({t:'Margen bajo',txt:`Un margen del ${num(mesMPct,1)}% indica que el coste está muy cerca del precio de venta.`});
+    ins.push({t:'Rendimiento del equipo',txt:`La media de ${num(mesKph,2)} kg/h es ${mesKph>=12?'buena.':mesKph>=8?'aceptable.':'inferior a lo deseable.'}`});
+    const pctObj=objetivoSemanal>0?(mesKg/objetivoSemanal*100):0;
+    ins.push({t:'Progreso objetivo mensual',txt:`${num(pctObj,1)}% del objetivo de ${num(objetivoSemanal,0)} kg (${num(mesKg,1)} kg). ${pctObj>=100?'✓ Objetivo cumplido.':pctObj>=75?'Muy cerca.':'Queda margen.'}`});
+    if(jorns.length>=2){const best=[...jorns].sort((a,b)=>b.totKg-a.totKg)[0];ins.push({t:'Mejor jornada',txt:`La más productiva fue el ${best.fecha} con ${num(best.totKg,1)} kg.`});}
+  }
+  const el=document.getElementById(panelId);
+  if(el) el.innerHTML=ins.map(i=>`<div class="insight-card"><div class="insight-title">${i.t}</div><div class="insight-text">${i.txt}</div></div>`).join('');
+}
+
+function renderMejorasMes(mesMPct,mesKph,mesKg,jorns,panelId) {
+  const mej=[];
+  if(!jorns.length){mej.push({t:'Primeros pasos',txt:'Registra jornadas este mes para obtener recomendaciones.'});}
+  else {
+    if(mesKph<12) mej.push({t:'Mejorar kg/hora',txt:'El equipo aún no alcanza los 12 kg/h de referencia. Revisa técnica y distribución.'});
+    if(mesMPct<40) mej.push({t:'Optimizar coste',txt:'El coste no debería superar 0,55 €/kg para mantener margen >45%.'});
+    if(jorns.length>=3){const ks=jorns.map(j=>j.kph||0),mx=Math.max(...ks),mn=Math.min(...ks);if(mx-mn>3) mej.push({t:'Variabilidad',txt:`Diferencia de ${num(mx,1)} a ${num(mn,1)} kg/h entre jornadas. Identifica las condiciones más productivas.`});}
+    if(mesKg>0&&jorns.length>0){const kpj=mesKg/jorns.length,r=Math.ceil(Math.max(objetivoSemanal-mesKg,0)/kpj);mej.push({t:'Proyección objetivo mensual',txt:r<=0?`Ya has alcanzado el objetivo de ${num(objetivoSemanal,0)} kg este mes. ✓`:`Llevas ${num(mesKg,1)} kg. A tu ritmo de ${num(kpj,1)} kg/jornada, te faltan ~${r} jornada(s) más.`});}
+    mej.push({t:'Módulo de transformación',txt:'El precio de producto transformado es donde se crea el mayor valor del negocio.'});
+  }
+  const el=document.getElementById(panelId);
+  if(el) el.innerHTML=mej.map(m=>`<div class="mejora-card"><div class="mejora-title">${m.t}</div><div class="mejora-text">${m.txt}</div></div>`).join('');
+}
+
+// ─── RESUMEN MENSUAL ──────────────────────────────────
+function renderMensual() {
+  const jorns=jornadasMes(mesOffset).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const label=mesLabel(mesOffset);
+
+  document.getElementById('mes-nav-label').textContent=mesOffset===0?'Mes actual · '+label:label.charAt(0).toUpperCase()+label.slice(1);
+  document.getElementById('btn-mes-next').disabled=mesOffset>=0;
+
+  document.getElementById('mes-tabla').innerHTML=jorns.length===0
+    ?`<tr><td colspan="9" style="color:var(--text3);font-style:italic;padding:16px;">Sin jornadas registradas este mes.</td></tr>`
+    :[...jorns].reverse().map(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;return`<tr>
+      <td class="muted" style="font-family:var(--mono);font-size:11px;">${j.fecha}</td>
+      <td class="num">${j.workers.length}</td><td class="num green">${num(j.totKg,1)} kg</td>
+      <td class="num ${(j.kph||0)>=12?'green':(j.kph||0)>=8?'amber':'red'}">${num(j.kph||0,2)}</td>
+      <td class="num">${eur(j.totCoste)}</td><td class="num">${eur(j.totValor)}</td>
+      <td class="num ${j.margen>=0?'green':'red'}">${eur(j.margen)}</td>
+      <td class="num ${mp>=40?'green':mp>=25?'amber':'red'}">${num(mp,1)}%</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button onclick="irAJornada('${j.fecha}')" style="font-size:9px;padding:4px 10px;">✎ Editar</button>
+        <button onclick="eliminarJornadaDirecta('${j.fecha}')" style="font-size:9px;padding:4px 8px;color:var(--red);background:var(--red-bg);border:1px solid #dca090;border-radius:4px;cursor:pointer;box-shadow:none;margin-left:4px;">✕ Borrar</button>
+      </td>
+    </tr>`;}).join('');
+}
+
+// ─── EXPORTACIÓN ─────────────────────────────────────
+function exportarResumen() {
+  const jorns=jornadasSemana(semanaOffset);
+  const lines=['RESUMEN SEMANAL — SIEGA TOMILLO\n',semanaLabel(semanaOffset),''];
+  jorns.forEach(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;lines.push(`${j.fecha} | ${j.workers.length} trab. | ${num(j.totKg,1)} kg | ${num(j.kph,2)} kg/h | Margen: ${num(mp,1)}%`);});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain'}));a.download='resumen_semanal.txt';a.click();
+}
+function exportarCSV() {
+  const jorns=jornadasSemana(semanaOffset);
+  const hdr='Fecha,Trabajadores,Kg totales,Horas,Kg/h,Coste,Valor,Margen,Margen%';
+  const rows=jorns.map(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;return[j.fecha,j.workers.length,num(j.totKg,1),num(j.totHoras||0,1),num(j.kph||0,2),num(j.totCoste,2),num(j.totValor,2),num(j.margen,2),num(mp,1)].join(',');});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[hdr,...rows].join('\n')],{type:'text/csv'}));a.download='siega_semanal.csv';a.click();
+}
+function exportarResumenMes() {
+  const jorns=jornadasMes(mesOffset).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const label=mesLabel(mesOffset);
+  const lines=['RESUMEN MENSUAL — SIEGA TOMILLO\n',label.toUpperCase(),''];
+  jorns.forEach(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;lines.push(`${j.fecha} | ${j.workers.length} trab. | ${num(j.totKg,1)} kg | ${num(j.kph||0,2)} kg/h | Margen: ${num(mp,1)}%`);});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain'}));a.download=`resumen_mensual_${label.replace(' ','_')}.txt`;a.click();
+}
+function exportarCSVMes() {
+  const jorns=jornadasMes(mesOffset).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const hdr='Fecha,Trabajadores,Kg totales,Horas,Kg/h,Coste,Valor,Margen,Margen%';
+  const rows=jorns.map(j=>{const mp=j.totValor>0?(j.margen/j.totValor*100):0;return[j.fecha,j.workers.length,num(j.totKg,1),num(j.totHoras||0,1),num(j.kph||0,2),num(j.totCoste,2),num(j.totValor,2),num(j.margen,2),num(mp,1)].join(',');});
+  const label=mesLabel(mesOffset);
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([[hdr,...rows].join('\n')],{type:'text/csv'}));a.download=`siega_mensual_${label.replace(' ','_')}.csv`;a.click();
+}
+
+// ─── FIREBASE CONFIG ─────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCA8ujkRSh28rw9-Sbtjil2zJQPR-2-LU0",
+  authDomain: "siega-2026.firebaseapp.com",
+  projectId: "siega-2026",
+  storageBucket: "siega-2026.firebasestorage.app",
+  messagingSenderId: "783002527656",
+  appId: "1:783002527656:web:c1c4681f40880e29fedf9d"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// Cuentas autorizadas — añade aquí los emails que pueden acceder
+const EMAILS_AUTORIZADOS = [
+  'a.lozanosanchez0@gmail.com',
+  // añade más emails aquí si necesitas dar acceso a otras personas
+];
+
+let currentUser = null;
+
+function loginGoogle() {
+  document.getElementById('login-loading').style.display = 'block';
+  document.getElementById('login-error').textContent = '';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    document.getElementById('login-loading').style.display = 'none';
+    document.getElementById('login-error').textContent = 'Error al iniciar sesión. Inténtalo de nuevo.';
+  });
+}
+
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('access-denied').classList.remove('visible');
+    document.getElementById('login-loading').style.display = 'none';
+    return;
+  }
+
+  // Verificar si el email está autorizado
+  if (!EMAILS_AUTORIZADOS.includes(user.email)) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('access-denied').classList.add('visible');
+    return;
+  }
+
+  // Acceso concedido
+  currentUser = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('access-denied').classList.remove('visible');
+
+  // Cargar datos desde Firestore
+  await cargarDesdeFirestore();
+  arrancar();
+});
+
+// ─── FIRESTORE SYNC ───────────────────────────────────
+async function cargarDesdeFirestore() {
+  try {
+    const doc = await db.collection('siega').doc('datos').get();
+    if (doc.exists) {
+      const data = doc.data();
+      equipo          = data.equipo          || DEFAULT_EQUIPO;
+      jornadas        = data.jornadas        || [];
+      objetivoSemanal = data.objetivoSemanal || 10000;
+    } else {
+      // Primera vez en Firestore — migrar desde localStorage si hay datos
+      const raw = localStorage.getItem('siega_tomillo_data') || localStorage.getItem('siega_tomillo_data_v4');
+      if (raw) {
+        const local = JSON.parse(raw);
+        equipo          = local.equipo          || DEFAULT_EQUIPO;
+        jornadas        = local.jornadas        || [];
+        objetivoSemanal = local.objetivoSemanal || 10000;
+        // Subir datos locales a Firestore
+        await guardarEnFirestore();
+        mostrarToast('✓ Datos migrados desde este dispositivo a la nube');
+      } else {
+        equipo          = DEFAULT_EQUIPO.map(e=>({...e}));
+        jornadas        = [];
+        objetivoSemanal = 10000;
+      }
+    }
+  } catch(e) {
+    console.error('Error Firestore:', e);
+    // Fallback a localStorage si falla Firestore
+    const raw = localStorage.getItem('siega_tomillo_data');
+    if (raw) {
+      const data = JSON.parse(raw);
+      equipo          = data.equipo          || DEFAULT_EQUIPO;
+      jornadas        = data.jornadas        || [];
+      objetivoSemanal = data.objetivoSemanal || 10000;
+    }
+  }
+}
+
+async function guardarEnFirestore() {
+  if (!currentUser) return;
+  try {
+    await db.collection('siega').doc('datos').set({
+      equipo, jornadas, objetivoSemanal,
+      ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp(),
+      actualizadoPor: currentUser.email
+    });
+  } catch(e) {
+    console.error('Error guardando en Firestore:', e);
+  }
+}
+
+function arrancar() {
+  // Mostrar email del usuario
+  const emailEl = document.getElementById('user-email');
+  if(emailEl && currentUser) emailEl.textContent = currentUser.email;
+
+// Recalcular TODOS los totales siempre (no condicional) para garantizar datos correctos
+jornadas.forEach(j=>{
+  j.workers.forEach(w=>{const e=equipo.find(e=>e.nombre===w.nombre);if(e) w.tarifa=e.tarifa;});
+  const pv=j.precioVenta||1;
+  j.totCoste=j.workers.reduce((s,w)=>s+w.kg*w.tarifa,0);
+  j.totValor=j.totKg*pv;
+  j.margen=j.totValor-j.totCoste;
+  j.benefNeto=j.totValor-j.totCoste-(j.totOtros||0);
+  j.kph=j.totHoras>0?j.totKg/j.totHoras:0;
+});
+if(jornadas.length>0) guardarEstado();
+
+// UI — después del recálculo
+syncWorkers();
+renderEquipoList();
+actualizarStickyBar();
+
+// Badge estado inicial
+const fechaInit=document.getElementById('fecha-jornada').value;
+const jornadaInit=jornadas.find(j=>j.fecha===fechaInit);
+if(jornadaInit){
+  document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge guardado">✓ Jornada guardada — editando</span>';
+  document.getElementById('btn-eliminar').style.display='inline-flex';
+  document.getElementById('tabla-dia-titulo').textContent='Producción por trabajador — '+fechaInit;
+} else {
+  document.getElementById('dia-estado-badge').innerHTML='<span class="dia-badge nuevo">+ Jornada nueva</span>';
+}
+
+// Dashboard con datos ya listos
+renderDashboard();
+
+// Segunda llamada diferida
+setTimeout(()=>{
+  actualizarStickyBar();
+  renderDashboard();
+  if(jornadas.length>0) mostrarToast('Datos cargados: '+jornadas.length+' jornada(s).');
+}, 50);
+
+// Importar desde URL si viene con ?importar=
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const importar = params.get('importar');
+  if (!importar) return;
+  try {
+    const json = decodeURIComponent(escape(atob(importar)));
+    const j = JSON.parse(json);
+    if (!j.fecha || !j.workers) throw new Error('Datos inválidos');
+    j.workers.forEach(w => { const e=equipo.find(e=>e.nombre===w.nombre); if(e) w.tarifa=e.tarifa; });
+    const pv=j.precioVenta||1;
+    j.totCoste=j.workers.reduce((s,w)=>s+w.kg*w.tarifa,0);
+    j.totValor=j.totKg*pv; j.margen=j.totValor-j.totCoste;
+    j.benefNeto=j.totValor-j.totCoste-(j.totOtros||0);
+    if(j.totHoras>0) j.kph=j.totKg/j.totHoras;
+    const idx=jornadas.findIndex(jj=>jj.fecha===j.fecha);
+    if(idx>=0){ if(confirm(`Ya existe jornada para el ${j.fecha}. ¿Sobreescribir?`)) jornadas[idx]=j; else return; }
+    else jornadas.push(j);
+    guardarEstado(); actualizarStickyBar(); renderDashboard();
+    window.history.replaceState({},document.title,window.location.pathname);
+    setTimeout(()=>mostrarToast(`✓ Jornada del ${j.fecha} importada — ${num(j.totKg,1)} kg`),500);
+  } catch(e) { console.error('Error importar:',e); }
+})();
+
+// Importar al abrir la app (con pequeño delay)
+setTimeout(importarDesdeSheets, 1000);
+
+} // fin arrancar()
+
+</script>
+</body>
+</html>
